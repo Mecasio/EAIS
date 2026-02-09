@@ -89,7 +89,7 @@ const MedicalApplicantList = () => {
         socket.current = io(API_BASE_URL);
 
         return () => {
-        socket.current.disconnect();
+            socket.current.disconnect();
         };
     }, []);
 
@@ -828,7 +828,7 @@ const MedicalApplicantList = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-       return <LoadingOverlay open={loading} message="Loading..." />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -839,7 +839,7 @@ const MedicalApplicantList = () => {
 
 
     return (
-           <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+        <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                 <Typography variant="h4" fontWeight="bold" sx={{ color: titleColor, }}>
                     MEDICAL RECORDS
@@ -882,66 +882,45 @@ const MedicalApplicantList = () => {
                 sx={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center",
+                    flexWrap: "nowrap", // ❌ prevent wrapping
                     width: "100%",
-                    mt: 2,
+                    mt: 3,
+                    gap: 2,
                 }}
             >
                 {tabs1.map((tab, index) => (
-                    <React.Fragment key={index}>
-                        {/* Step Card */}
-                        <Card
-                            onClick={() => handleStepClick(index, tab.to)}
-                            sx={{
-                                flex: 1,
-                                maxWidth: `${100 / tabs1.length}%`, // evenly fit 100%
-                                height: 100,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer",
-                                borderRadius: 2,
+                    <Card
+                        key={index}
+                        onClick={() => handleStepClick(index, tab.to)}
+                      sx={{
+                            flex: `1 1 ${100 / tabs1.length}%`, // evenly divide row
+                            height: 135,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            borderRadius: 2,
+                            border: `2px solid ${borderColor}`,
+                            backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                            color: activeStep === index ? "#fff" : "#000",
+                            boxShadow:
+                                activeStep === index
+                                    ? "0px 4px 10px rgba(0,0,0,0.3)"
+                                    : "0px 2px 6px rgba(0,0,0,0.15)",
+                            transition: "0.3s ease",
+                            "&:hover": {
+                                backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
+                            },
+                        }}
 
-                                border: `2px solid ${borderColor}`,
-                                backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
-
-                                color: activeStep === index ? "#fff" : "#000",
-                                boxShadow:
-                                    activeStep === index
-                                        ? "0px 4px 10px rgba(0,0,0,0.3)"
-                                        : "0px 2px 6px rgba(0,0,0,0.15)",
-                                transition: "0.3s ease",
-                                "&:hover": {
-                                    backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
-                                },
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    display: "flex",
-                                    flexDirection: "column",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <Box sx={{ fontSize: 32, mb: 0.5 }}>{tab.icon}</Box>
-                                <Typography
-                                    sx={{ fontSize: 14, fontWeight: "bold", textAlign: "center" }}
-                                >
-                                    {tab.label}
-                                </Typography>
-                            </Box>
-                        </Card>
-
-                        {/* Spacer instead of line */}
-                        {index < tabs1.length - 1 && (
-                            <Box
-                                sx={{
-                                    flex: 0.1,
-                                    mx: 1, // margin to keep spacing
-                                }}
-                            />
-                        )}
-                    </React.Fragment>
+                    >
+                        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <Box sx={{ fontSize: 40, mb: 1 }}>{tab.icon}</Box>
+                            <Typography sx={{ fontSize: 14, fontWeight: "bold", textAlign: "center" }}>
+                                {tab.label}
+                            </Typography>
+                        </Box>
+                    </Card>
                 ))}
             </Box>
 

@@ -427,5 +427,32 @@ router.post("/unassign_verify_evaluator_applicant_list", async (req, res) => {
   }
 });
 
+router.get("/verify_schedules", async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        s.schedule_id,
+        s.schedule_date,
+        s.building_description,
+        s.room_description,
+        s.start_time,
+        s.end_time,
+        s.evaluator,
+        s.room_quota,
+        COUNT(va.applicant_id) AS assigned_count
+      FROM verify_document_schedule s
+      LEFT JOIN verify_applicants va
+        ON s.schedule_id = va.schedule_id
+      GROUP BY s.schedule_id
+      ORDER BY s.schedule_id DESC
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error("❌ Error fetching verify schedules:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
 
 module.exports = router;

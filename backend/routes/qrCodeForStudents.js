@@ -17,6 +17,8 @@ router.get("/student_qr_information/:student_number", async (req, res) => {
           prog.program_description AS program,
           ylt.year_level_id,
           ylt.year_level_description,
+          dpt.dprtmnt_name AS department_name,
+          dpt.dprtmnt_code AS department_code,
           CASE 
             WHEN sts.enrolled_status = 1 AND sy.astatus = 1 THEN 1 
             ELSE 0 
@@ -28,6 +30,8 @@ router.get("/student_qr_information/:student_number", async (req, res) => {
         LEFT JOIN year_level_table ylt ON sts.year_level_id = ylt.year_level_id
         LEFT JOIN curriculum_table c ON sts.active_curriculum = c.curriculum_id
         LEFT JOIN program_table prog ON c.program_id = prog.program_id
+        LEFT JOIN dprtmnt_curriculum_table dct ON c.curriculum_id = dct.curriculum_id
+        LEFT JOIN dprtmnt_table dpt ON dct.dprtmnt_id = dpt.dprtmnt_id
         WHERE snt.student_number = ?
         ORDER BY sts.active_school_year_id DESC
         LIMIT 1;
@@ -45,5 +49,4 @@ router.get("/student_qr_information/:student_number", async (req, res) => {
     res.status(500).send("Failed to get student QR information.");
   }
 });
-
 module.exports = router;

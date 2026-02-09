@@ -17,6 +17,8 @@ import {
     Container,
     Paper,
     Table,
+    Snackbar,   // ✅ ADD
+    Alert,      // ✅ ADD
 } from "@mui/material";
 import API_BASE_URL from "../apiConfig";
 import { useNavigate } from "react-router-dom";
@@ -224,17 +226,6 @@ const PhysicalNeuroExam = () => {
     }, [searchQuery, persons]);
 
 
-    const fetchByPersonId = async (personID) => {
-        try {
-            const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${personID}`);
-            setPerson(res.data);
-            setSelectedPerson(res.data);
-            if (res.data?.student_number) {
-            }
-        } catch (err) {
-            console.error("❌ person_with_applicant failed:", err);
-        }
-    };
 
     useEffect(() => {
         let consumedFlag = false;
@@ -272,27 +263,6 @@ const PhysicalNeuroExam = () => {
 
 
 
-    // Fetch person by ID (when navigating with ?person_id=... or sessionStorage)
-    useEffect(() => {
-        const fetchPersonById = async () => {
-            if (!userID) return;
-
-            try {
-                const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${userID}`);
-                if (res.data) {
-                    setPerson(res.data);
-                    setSelectedPerson(res.data);
-                } else {
-                    console.warn("⚠️ No person found for ID:", userID);
-                }
-            } catch (err) {
-                console.error("❌ Failed to fetch person by ID:", err);
-            }
-        };
-
-        fetchPersonById();
-    }, [userID]);
-
 
     const [form, setForm] = useState({
         student_number: "",
@@ -314,6 +284,8 @@ const PhysicalNeuroExam = () => {
 
     const navigate = useNavigate();
     const [activeStep, setActiveStep] = useState(5);
+
+
 
     const tabs1 = [
         { label: "Medical Applicant List", to: "/medical_applicant_list", icon: <ListAltIcon /> },
@@ -351,19 +323,49 @@ const PhysicalNeuroExam = () => {
         setForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    const [snack, setSnack] = useState({
+        open: false,
+        message: "",
+        severity: "success", // success | error | warning | info
+    });
+
+    const handleCloseSnack = () => {
+        setSnack((prev) => ({ ...prev, open: false }));
+    };
+
     const handleSave = async () => {
-        if (!studentNumber) return alert("Enter a student number first.");
+        if (!studentNumber) {
+            setSnack({
+                open: true,
+                message: "Please enter a student number first.",
+                severity: "warning",
+            });
+            return;
+        }
+
         try {
             await axios.put(`${API_BASE_URL}/api/physical-neuro`, {
                 ...form,
                 student_number: studentNumber,
             });
-            alert("Record saved successfully!");
+
+            setSnack({
+                open: true,
+                message: "Record saved successfully!",
+                severity: "success",
+            });
+
         } catch (err) {
             console.error(err);
-            alert("Save failed.");
+
+            setSnack({
+                open: true,
+                message: "Failed to save record. Please try again.",
+                severity: "error",
+            });
         }
     };
+
 
     const fields = [
         { label: "Mental Status", check: "pne_mental_status_check", text: "pne_mental_status_text" },
@@ -474,7 +476,7 @@ const PhysicalNeuroExam = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-       return <LoadingOverlay open={loading} message="Loading..." />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -484,7 +486,7 @@ const PhysicalNeuroExam = () => {
     }
 
     return (
-         <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+        <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
             <Box
                 sx={{
                     display: "flex",
@@ -550,6 +552,7 @@ const PhysicalNeuroExam = () => {
                     alignItems: "center",
                     width: "100%",
                     mb: 3,
+                    gap: 2,
                 }}
             >
                 {tabs1.map((tab, index) => (
@@ -557,23 +560,26 @@ const PhysicalNeuroExam = () => {
                         key={index}
                         onClick={() => handleStepClick(index, tab.to)}
                         sx={{
-                            flex: 1,
-                            height: 100,
-                            mx: 1,
-
+                            flex: `1 1 ${100 / tabs1.length}%`, // evenly divide row
+                            height: 135,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            borderRadius: 2,
                             cursor: "pointer",
+                            borderRadius: 2,
                             border: `2px solid ${borderColor}`,
                             backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
                             color: activeStep === index ? "#fff" : "#000",
+                            boxShadow:
+                                activeStep === index
+                                    ? "0px 4px 10px rgba(0,0,0,0.3)"
+                                    : "0px 2px 6px rgba(0,0,0,0.15)",
                             transition: "0.3s ease",
                             "&:hover": {
-                                backgroundColor: activeStep === index ? "#000" : "#f5d98f",
+                                backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
                             },
                         }}
+
                     >
                         <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                             <Box sx={{ fontSize: 32, mb: 0.5 }}>{tab.icon}</Box>
@@ -810,6 +816,23 @@ const PhysicalNeuroExam = () => {
 
                 </Box>
             </Container>
+
+
+            {/* ✅ Snackbar */}
+            <Snackbar
+                open={snack.open}
+                autoHideDuration={4000}
+                onClose={handleCloseSnack}
+                anchorOrigin={{ vertical: "top", horizontal: "center" }}
+            >
+                <Alert
+                    severity={snack.severity}
+                    onClose={handleCloseSnack}
+                    sx={{ width: "100%" }}
+                >
+                    {snack.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

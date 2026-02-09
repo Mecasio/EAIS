@@ -15,6 +15,8 @@ import {
   Container,
   Paper,
   Table,
+  Alert,
+  Snackbar
 } from "@mui/material";
 import API_BASE_URL from "../apiConfig";
 import { motion } from "framer-motion";
@@ -188,25 +190,7 @@ const MedicalRequirements = () => {
 
 
 
-  useEffect(() => {
-    const fetchPersonById = async () => {
-      if (!userID) return;
-      try {
-        const res = await axios.get(`${API_BASE_URL}/api/person_with_applicant/${userID}`);
-        if (res.data) {
-          setPerson(res.data);
-          setSelectedPerson(res.data);
-        }
-      } catch (err) {
-        console.error("❌ Failed to fetch person by ID:", err);
-      }
-    };
 
-    // Only auto-fetch if explicitly requested (e.g., from Applicant List)
-    if (explicitSelection) {
-      fetchPersonById();
-    }
-  }, [userID, explicitSelection]);
 
 
   const [form, setForm] = useState({
@@ -248,6 +232,8 @@ const MedicalRequirements = () => {
     { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon /> },
     { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <SchoolIcon /> },
   ];
+
+
 
   const [person, setPerson] = useState(null);
   const fetchByStudentNumber = async (number) => {
@@ -396,20 +382,32 @@ const MedicalRequirements = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const [snack, setSnack] = useState({
+    open: false,
+    message: "",
+    severity: "success", // success, error, warning, info
+  });
+
   // 💾 Save or Update Medical Record
   const handleSave = async () => {
-    if (!studentNumber) return alert("Enter a student number first.");
+    if (!studentNumber) {
+      setSnack({ open: true, message: "Enter a student number first.", severity: "warning" });
+      return;
+    }
+
     try {
       await axios.put(`${API_BASE_URL}/api/medical-requirements`, {
         ...form,
         student_number: studentNumber,
       });
-      alert("✅ Record saved successfully!");
+
+      setSnack({ open: true, message: "Record saved successfully!", severity: "success" });
     } catch (err) {
       console.error("❌ Save failed:", err);
-      alert("Save failed.");
+      setSnack({ open: true, message: "Save failed.", severity: "error" });
     }
   };
+
 
   // 🧭 Tab Navigation
   const handleStepClick = (index, path) => {
@@ -453,7 +451,7 @@ const MedicalRequirements = () => {
 
   // Put this at the very bottom before the return 
   if (loading || hasAccess === null) {
-   return <LoadingOverlay open={loading} message="Loading..." />;
+    return <LoadingOverlay open={loading} message="Loading..." />;
   }
 
   if (!hasAccess) {
@@ -531,6 +529,7 @@ const MedicalRequirements = () => {
           alignItems: "center",
           width: "100%",
           mb: 3,
+          gap: 2,
         }}
       >
         {tabs1.map((tab, index) => (
@@ -538,22 +537,26 @@ const MedicalRequirements = () => {
             key={index}
             onClick={() => handleStepClick(index, tab.to)}
             sx={{
-              flex: 1,
-              height: 100,
-              mx: 1,
+              flex: `1 1 ${100 / tabs1.length}%`, // evenly divide row
+              height: 135,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              borderRadius: 2,
               cursor: "pointer",
+              borderRadius: 2,
               border: `2px solid ${borderColor}`,
               backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
               color: activeStep === index ? "#fff" : "#000",
+              boxShadow:
+                activeStep === index
+                  ? "0px 4px 10px rgba(0,0,0,0.3)"
+                  : "0px 2px 6px rgba(0,0,0,0.15)",
               transition: "0.3s ease",
               "&:hover": {
-               backgroundColor: activeStep === index ? "#000" : "#f5d98f",
+                backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
               },
             }}
+
           >
             <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
               <Box sx={{ fontSize: 32, mb: 0.5 }}>{tab.icon}</Box>
@@ -944,6 +947,21 @@ const MedicalRequirements = () => {
 
 
       </Container>
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={3000}
+        onClose={() => setSnack((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setSnack((prev) => ({ ...prev, open: false }))}
+          severity={snack.severity}
+          sx={{ width: "100%" }}
+        >
+          {snack.message}
+        </Alert>
+      </Snackbar>
+
     </Box>
   );
 };

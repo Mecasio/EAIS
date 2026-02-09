@@ -67,16 +67,14 @@ const MedicalDashboard5 = () => {
   }, [settings]);
 
 
-  const stepsData = [
-    { label: "Medical Applicant List", to: "/medical_applicant_list", icon: <ListAltIcon /> },
-    { label: "Applicant Form", to: "/medical_dashboard1", icon: <HowToRegIcon /> },
-    { label: "Submitted Documents", to: "/medical_requirements", icon: <UploadFileIcon /> }, // updated icon
-    { label: "Medical History", to: "/medical_requirements_form", icon: <PersonIcon /> },
-    { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon /> },
-    { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <SchoolIcon /> },
-
-  ];
-
+    const stepsData = [
+        { label: "Medical Applicant List", to: "/medical_applicant_list", icon: <ListAltIcon /> },
+        { label: "Applicant Form", to: "/medical_dashboard1", icon: <HowToRegIcon /> },
+        { label: "Submitted Documents", to: "/medical_requirements", icon: <UploadFileIcon /> }, // updated icon
+        { label: "Medical History", to: "/medical_requirements_form", icon: <PersonIcon /> },
+        { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon /> },
+        { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <SchoolIcon /> },
+    ];
   const handleNavigateStep = (index, to) => {
     setCurrentStep(index);
 
@@ -490,7 +488,7 @@ const MedicalDashboard5 = () => {
 
   // Put this at the very bottom before the return 
   if (loading || hasAccess === null) {
-   return <LoadingOverlay open={loading} message="Loading..." />;
+    return <LoadingOverlay open={loading} message="Loading..." />;
   }
 
   if (!hasAccess) {
@@ -502,7 +500,7 @@ const MedicalDashboard5 = () => {
 
   // dot not alter
   return (
-     <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+    <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
       {showPrintView && (
         <div ref={divToPrintRef} style={{ display: "block" }}>
           <ExamPermit personId={userID} />   {/* ✅ pass the searched person_id */}
@@ -559,23 +557,23 @@ const MedicalDashboard5 = () => {
             <Card
               onClick={() => handleNavigateStep(index, step.to)}
               sx={{
-                flex: `1 1 ${100 / stepsData.length}%`, // evenly divide width
-                height: 120,
+                flex: `1 1 ${100 / stepsData.length}%`, // evenly divide row
+                height: 135,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
                 borderRadius: 2,
                 border: `2px solid ${borderColor}`,
-                backgroundColor: currentStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
-                color: currentStep === index ? "#fff" : "#000",
+                backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                color: activeStep === index ? "#fff" : "#000",
                 boxShadow:
-                  currentStep === index
+                  activeStep === index
                     ? "0px 4px 10px rgba(0,0,0,0.3)"
                     : "0px 2px 6px rgba(0,0,0,0.15)",
                 transition: "0.3s ease",
                 "&:hover": {
-                  backgroundColor: currentStep === index ? "#000" : "#f5d98f",
+                  backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
                 },
               }}
             >
@@ -643,8 +641,8 @@ const MedicalDashboard5 = () => {
         </Table>
       </TableContainer>
 
-     
-  <Box
+
+      <Box
         sx={{
           display: "flex",
           justifyContent: "center",

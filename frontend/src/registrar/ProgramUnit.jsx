@@ -135,7 +135,7 @@ const ProgramUnit = () => {
     };
 
     const fetchTaggedPrograms = async () => {
-        const res = await axios.get(`${API_BASE_URL}/prgram_tagging_list`);
+        const res = await axios.get(`${API_BASE_URL}/program_tagging_list`);
         setTaggedPrograms(res.data);
     };
 

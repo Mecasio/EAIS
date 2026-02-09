@@ -86,6 +86,12 @@ const StudentQrInfo = () => {
                 <b>Program:</b> {info.program || "-"}
               </Typography>
               <Typography>
+                <b>Department:</b>{" "}
+                {info.department_name || info.department_code
+                  ? `${info.department_name || "-"} (${info.department_code || "-"})`
+                  : "-"}
+              </Typography>
+              <Typography>
                 <b>Year Level:</b>{" "}
                 {info.year_level_description || info.year_level_id || "-"}
               </Typography>

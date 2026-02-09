@@ -8,6 +8,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import API_BASE_URL from "../apiConfig";
 
 const HealthRecord = () => {
+
     const settings = useContext(SettingsContext);
 
     const [titleColor, setTitleColor] = useState("#000000");
@@ -45,6 +46,22 @@ const HealthRecord = () => {
         if (settings.campus_address) setCampusAddress(settings.campus_address);
 
     }, [settings]);
+
+    const [campusAddress, setCampusAddress] = useState("");
+
+
+    useEffect(() => {
+        if (settings && settings.address) {
+            setCampusAddress(settings.address);
+        }
+    }, [settings]);
+
+
+
+    const words = companyName.trim().split(" ");
+    const middle = Math.ceil(words.length / 2);
+    const firstLine = words.slice(0, middle).join(" ");
+    const secondLine = words.slice(middle).join(" ");
 
     const [userID, setUserID] = useState("");
     const [user, setUser] = useState("");
@@ -124,11 +141,7 @@ const HealthRecord = () => {
         guardian_email: "",
     });
 
-    const campusAddresses = {
-        0: "Nagtahan St. Sampaloc, Manila",
-        1: "Poblacion 5, Congressional Road, General Mariano Alvarez,",
-    };
-    const campusAddress = campusAddresses[person?.campus] || "";
+
 
     const location = useLocation();
     const queryParams = new URLSearchParams(location.search);
@@ -225,7 +238,12 @@ const HealthRecord = () => {
 
             setPersonResults(res.data ? [res.data] : []);
             setPerson(res.data);
-            fetchMedicalData(res.data.student_number);
+
+            if (res.data?.student_number) {
+                fetchDentalData(res.data.student_number);
+            }
+
+
             console.log("✅ Person search results:", res.data);
         } catch (error) {
             if (error.response?.status === 404) {
@@ -237,20 +255,6 @@ const HealthRecord = () => {
         }
     };
 
-    const fetchMedicalData = async (studentNumber) => {
-        try {
-            const res = await axios.get(`${API_BASE_URL}/api/medical-requirements/${studentNumber}`);
-            setMedicalData(res.data);
-            console.log("✅ Loaded medical data for:", studentNumber, res.data);
-        } catch (err) {
-            if (err.response?.status === 404) {
-                console.warn(`ℹ️ No medical record found for ${studentNumber}`);
-                setMedicalData(null);
-            } else {
-                console.error("❌ Failed to load medical data:", err);
-            }
-        }
-    };
 
     const [searchError, setSearchError] = useState("");
     useEffect(() => {
@@ -264,6 +268,11 @@ const HealthRecord = () => {
 
                 console.log("Search result data:", res.data);
                 setPerson(res.data);
+
+                if (res.data?.student_number) {
+                    fetchDentalData(res.data.student_number);
+                }
+
 
                 const idToStore = res.data.person_id || res.data.id;
                 if (!idToStore) {
@@ -285,9 +294,63 @@ const HealthRecord = () => {
     }, [searchQuery]);
 
 
+    const [dental, setDental] = useState({});
+
+    const fetchDentalData = async (studentNumber) => {
+        try {
+            const res = await axios.get(
+                `${API_BASE_URL}/api/dental-assessment/${studentNumber}`
+            );
+
+            const parsed = {
+                ...res.data,
+                dental_upper_right: parseTeeth(res.data.dental_upper_right),
+                dental_upper_left: parseTeeth(res.data.dental_upper_left),
+                dental_lower_right: parseTeeth(res.data.dental_lower_right),
+                dental_lower_left: parseTeeth(res.data.dental_lower_left),
+            };
+
+            setDental(parsed);
+
+
+            console.log("✅ Dental loaded:", res.data);
+        } catch (err) {
+            console.warn("ℹ️ No dental record found");
+            setDental(null);
+        }
+    };
+
+
+    const isChecked = (key) => {
+        return Number(dental?.[key]) === 1;
+    };
+
+    const isProblem = (val) => {
+        if (!val) return false;
+        return val !== "Normal";
+    };
+
+    const parseTeeth = (val) => {
+        if (!val) return [];
+
+        // If already array, return
+        if (Array.isArray(val)) return val;
+
+        // If string, try parse JSON
+        if (typeof val === "string") {
+            try {
+                return JSON.parse(val);
+            } catch {
+                return [];
+            }
+        }
+
+        return [];
+    };
+
 
     return (
-          <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>{/* Header with Search aligned right */}
+        <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>{/* Header with Search aligned right */}
             <Box
                 sx={{
                     display: 'flex',
@@ -429,39 +492,49 @@ const HealthRecord = () => {
                                         {/* ---------- CENTER: TEXT BLOCK ---------- */}
                                         <div
                                             style={{
-                                                flex: "1",
+                                                flexGrow: 1,
                                                 textAlign: "center",
                                                 fontSize: "12px",
-                                                fontFamily: "times new roman",
+                                                fontFamily: "Arial",
+                                                letterSpacing: "5",
                                                 lineHeight: 1.4,
-                                                padding: "0 10px",
-                                                fontSize: "14px",
-                                                marginTop: "-10px"
+                                                paddingTop: 0,
+                                                paddingBottom: 0,
                                             }}
                                         >
-                                            <div style={{}}>
+                                            <div
+                                                style={{ fontFamily: "Arial", fontSize: "12px" }}
+                                            >
                                                 Republic of the Philippines
                                             </div>
-                                            <div style={{ letterSpacing: "2px" }}>
-                                                <b>EULOGIO "AMANG" RODRIGUEZ</b>
-                                            </div>
-                                            <div style={{ letterSpacing: "2px" }}>
-                                                <b>INSTITUTE OF SCIENCE AND TECHNOLOGY</b>
-                                            </div>
+                                            <div
+                                                style={{
 
-                                            {campusAddress && (
+                                                    letterSpacing: "2px",
+                                                    fontWeight: "bold",
+                                                    fontSize: "12px",
+                                                    fontFamily: "Arial"
+                                                }}
+                                            >
+                                                {firstLine}
+                                            </div>
+                                            {secondLine && (
                                                 <div
                                                     style={{
-                                                        fontsize: "12px",
-                                                        letterSpacing: "1px",
-                                                        fontFamily: "Arial",
+                                                        fontSize: "12px",
+                                                        letterSpacing: "2px",
+                                                        fontWeight: "bold",
+                                                        fontFamily: "Arial"
                                                     }}
                                                 >
+                                                    {secondLine}
+                                                </div>
+                                            )}
+                                            {campusAddress && (
+                                                <div style={{ fontSize: "12px", letterSpacing: "1px", fontFamily: "Arial" }}>
                                                     {campusAddress}
                                                 </div>
                                             )}
-
-
                                         </div>
 
                                         {/* ---------- RIGHT: PROFILE IMAGE ---------- */}
@@ -1019,12 +1092,12 @@ const HealthRecord = () => {
 
                         </tr>
 
-                        {/* Tooth Numbers and Condition Rows */}
+                        {/* ================= UPPER PART ================= */}
                         {[...Array(12)].map((_, i) => (
-                            <tr key={i}>
-                                {/* Left Column — General Condition with Black Checkbox */}
+                            <tr key={`upper-${i}`}>
+
+                                {/* LEFT: General Condition */}
                                 <td colSpan={16} style={{ textAlign: "left", paddingLeft: "4px" }}>
-                                    {/* Show checkbox only for rows 0–9 */}
                                     {i < 10 && (
                                         <span
                                             style={{
@@ -1032,110 +1105,62 @@ const HealthRecord = () => {
                                                 width: "20px",
                                                 height: "10px",
                                                 border: "1px solid black",
-
+                                                backgroundColor: isChecked(
+                                                    [
+                                                        "dental_good_hygiene",
+                                                        "dental_presence_of_calculus_plaque",
+                                                        "dental_gingivitis",
+                                                        "dental_pyorrhea",
+                                                        "dental_denture_wearer_up",
+                                                        "dental_denture_wearer_down",
+                                                        "dental_with_braces_up",
+                                                        "dental_with_braces_down",
+                                                        "dental_with_oral_hygiene_reliner",
+                                                        "others",
+                                                    ][i]
+                                                )
+                                                    ? "black"
+                                                    : "white",
                                                 marginRight: "6px",
-                                                verticalAlign: "middle",
                                             }}
-                                        ></span>
+                                        />
                                     )}
-                                    {i === 0 ? "Good Hygiene" : ""}
-                                    {i === 1 ? "Presence of Calculur deposits/Plague" : ""}
-                                    {i === 2 ? "Gingivitis" : ""}
-                                    {i === 3 ? "Pyorrhea" : ""}
-                                    {i === 4 ? "Denture wearer up" : ""}
-                                    {i === 5 ? "Denture wearer down" : ""}
-                                    {i === 6 ? "With ortho braces up" : ""}
-                                    {i === 7 ? "With ortho braces down" : ""}
-                                    {i === 8 ? "Waring Hawley’s retainer" : ""}
-                                    {i === 9 ? "Others" : ""}
+
+                                    {[
+                                        "Good Hygiene",
+                                        "Presence of Calculus / Plaque",
+                                        "Gingivitis",
+                                        "Pyorrhea",
+                                        "Denture wearer up",
+                                        "Denture wearer down",
+                                        "With ortho braces up",
+                                        "With ortho braces down",
+                                        "Wearing Hawley’s retainer",
+                                        "Others",
+                                    ][i] || ""}
                                 </td>
 
-                                {/* UPPER RIGHT */}
-                                <td colSpan={2} style={{ border: "1px solid black" }}>8</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>7</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>6</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>5</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>4</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>3</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>2</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>1</td>
+                                {/* ===== UPPER RIGHT ===== */}
+                                {[8, 7, 6, 5, 4, 3, 2, 1].map((num, idx) => (
+                                    <td
+                                        key={`ur-${i}-${num}`}
+                                        colSpan={2}
+                                        style={{
+                                            border: "1px solid black",
+                                            backgroundColor: isProblem(dental?.dental_upper_right?.[idx])
+                                                ? "black"
+                                                : "white",
+                                            color: isProblem(dental?.dental_upper_right?.[idx])
+                                                ? "white"
+                                                : "black",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {num}
+                                    </td>
+                                ))}
 
-                                {/* UPPER LEFT - Tooth Condition */}
-                                <td colSpan={12} style={{ border: "1px solid black", textAlign: "left", paddingLeft: "4px" }}>
-                                    {i === 0 ? "With Caries" : ""}
-                                    {i === 1 ? "Amalgam" : ""}
-                                    {i === 2 ? "Other Resto Mat" : ""}
-                                    {i === 3 ? "Pontie" : ""}
-                                    {i === 4 ? "Missing" : ""}
-                                    {i === 5 ? "RF" : ""}
-                                    {i === 6 ? "Unerrupted" : ""}
-                                    {i === 7 ? "For exo" : ""}
-                                    {i === 8 ? "TF" : ""}
-                                    {i === 9 ? "Abutment" : ""}
-                                    {i === 10 ? "RCT" : ""}
-                                    {i === 11 ? "Impacted" : ""}
-                                </td>
-
-                                {/* LOWER LEFT */}
-                                <td colSpan={2} style={{ border: "1px solid black" }}>1</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>2</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>3</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>4</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>5</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>6</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>7</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>8</td>
-                            </tr>
-                        ))}
-
-                        {/* Table Header Row */}
-                        <tr>
-                            <td colSpan={16} style={{ fontWeight: "bold", textAlign: "left" }}> Medical History</td>
-                            <td colSpan={16} style={{ border: "1px solid black", fontWeight: "bold" }}>LOWER RIGHT</td>
-                            <td colSpan={12} style={{ border: "1px solid black", fontWeight: "bold" }}></td>
-                            <td colSpan={16} style={{ border: "1px solid black", fontWeight: "bold" }}>LOWER LEFT</td>
-
-
-                        </tr>
-                        {/* Tooth Numbers and Condition Rows */}
-                        {[...Array(12)].map((_, i) => (
-                            <tr key={i}>
-                                {/* Left Column — Medical History with Black Checkbox */}
-                                <td colSpan={16} style={{ textAlign: "left", paddingLeft: "4px" }}>
-                                    {/* Add black checkbox for rows with labels */}
-                                    {i <= 6 && (
-                                        <span
-                                            style={{
-                                                display: "inline-block",
-                                                width: "20px",
-                                                height: "10px",
-                                                border: "1px solid black",
-                                                marginRight: "6px",
-                                                verticalAlign: "middle",
-                                            }}
-                                        ></span>
-                                    )}
-                                    {i === 0 ? "Diabetes" : ""}
-                                    {i === 1 ? "Hypertension" : ""}
-                                    {i === 2 ? "Allergies" : ""}
-                                    {i === 3 ? "Heart Disease" : ""}
-                                    {i === 4 ? "Epilepsy" : ""}
-                                    {i === 5 ? "Mental Illness" : ""}
-                                    {i === 6 ? "Clotting Disorder" : ""}
-                                    {i === 8 ? "Other Remarks" : ""}
-                                </td>
-
-                                {/* UPPER RIGHT */}
-                                <td colSpan={2} style={{ border: "1px solid black" }}>8</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>7</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>6</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>5</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>4</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>3</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>2</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>1</td>
-
-                                {/* UPPER LEFT - Tooth Condition */}
+                                {/* CENTER: Tooth Condition */}
                                 <td
                                     colSpan={12}
                                     style={{
@@ -1144,31 +1169,169 @@ const HealthRecord = () => {
                                         paddingLeft: "4px",
                                     }}
                                 >
-                                    {i === 0 ? "With Caries" : ""}
-                                    {i === 1 ? "Amalgam" : ""}
-                                    {i === 2 ? "Other Resto Mat" : ""}
-                                    {i === 3 ? "Pontie" : ""}
-                                    {i === 4 ? "Missing" : ""}
-                                    {i === 5 ? "RF" : ""}
-                                    {i === 6 ? "Unerrupted" : ""}
-                                    {i === 7 ? "For exo" : ""}
-                                    {i === 8 ? "TF" : ""}
-                                    {i === 9 ? "Abutment" : ""}
-                                    {i === 10 ? "RCT" : ""}
-                                    {i === 11 ? "Impacted" : ""}
+                                    {[
+                                        "With Caries",
+                                        "Amalgam",
+                                        "Other Resto Mat",
+                                        "Pontic",
+                                        "Missing",
+                                        "RF",
+                                        "Unerrupted",
+                                        "For Exo",
+                                        "TF",
+                                        "Abutment",
+                                        "RCT",
+                                        "Impacted",
+                                    ][i] || ""}
                                 </td>
 
-                                {/* LOWER LEFT */}
-                                <td colSpan={2} style={{ border: "1px solid black" }}>1</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>2</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>3</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>4</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>5</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>6</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>7</td>
-                                <td colSpan={2} style={{ border: "1px solid black" }}>8</td>
+                                {/* ===== UPPER LEFT ===== */}
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map((num, idx) => (
+                                    <td
+                                        key={`ul-${i}-${num}`}
+                                        colSpan={2}
+                                        style={{
+                                            border: "1px solid black",
+                                            backgroundColor: isProblem(dental?.dental_upper_left?.[idx])
+                                                ? "black"
+                                                : "white",
+                                            color: isProblem(dental?.dental_upper_left?.[idx])
+                                                ? "white"
+                                                : "black",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {num}
+                                    </td>
+                                ))}
                             </tr>
                         ))}
+
+                        {/* ================= LOWER HEADER ================= */}
+                        <tr>
+                            <td colSpan={16} style={{ fontWeight: "bold", textAlign: "left" }}>
+                                Medical History
+                            </td>
+                            <td colSpan={16} style={{ border: "1px solid black", fontWeight: "bold" }}>
+                                LOWER RIGHT
+                            </td>
+                            <td colSpan={12} style={{ border: "1px solid black" }}></td>
+                            <td colSpan={16} style={{ border: "1px solid black", fontWeight: "bold" }}>
+                                LOWER LEFT
+                            </td>
+                        </tr>
+
+                        {/* ================= LOWER PART ================= */}
+                        {[...Array(12)].map((_, i) => (
+                            <tr key={`lower-${i}`}>
+
+                                {/* LEFT: Medical History */}
+                                <td colSpan={16} style={{ textAlign: "left", paddingLeft: "4px" }}>
+                                    {i <= 6 && (
+                                        <span
+                                            style={{
+                                                display: "inline-block",
+                                                width: "20px",
+                                                height: "10px",
+                                                border: "1px solid black",
+                                                backgroundColor: isChecked(
+                                                    [
+                                                        "dental_diabetes",
+                                                        "dental_hypertension",
+                                                        "dental_allergies",
+                                                        "dental_heart_disease",
+                                                        "dental_epilepsy",
+                                                        "dental_mental_illness",
+                                                        "dental_clotting_disorder",
+                                                    ][i]
+                                                )
+                                                    ? "black"
+                                                    : "white",
+                                                marginRight: "6px",
+                                            }}
+                                        />
+                                    )}
+
+                                    {[
+                                        "Diabetes",
+                                        "Hypertension",
+                                        "Allergies",
+                                        "Heart Disease",
+                                        "Epilepsy",
+                                        "Mental Illness",
+                                        "Clotting Disorder",
+                                        "",
+                                        "Other Remarks",
+                                    ][i] || ""}
+                                </td>
+
+                                {/* ===== LOWER RIGHT ===== */}
+                                {[8, 7, 6, 5, 4, 3, 2, 1].map((num, idx) => (
+                                    <td
+                                        key={`lr-${i}-${num}`}
+                                        colSpan={2}
+                                        style={{
+                                            border: "1px solid black",
+                                            backgroundColor: isProblem(dental?.dental_lower_right?.[idx])
+                                                ? "black"
+                                                : "white",
+                                            color: isProblem(dental?.dental_lower_right?.[idx])
+                                                ? "white"
+                                                : "black",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {num}
+                                    </td>
+                                ))}
+
+                                {/* CENTER: Tooth Condition */}
+                                <td
+                                    colSpan={12}
+                                    style={{
+                                        border: "1px solid black",
+                                        textAlign: "left",
+                                        paddingLeft: "4px",
+                                    }}
+                                >
+                                    {[
+                                        "With Caries",
+                                        "Amalgam",
+                                        "Other Resto Mat",
+                                        "Pontic",
+                                        "Missing",
+                                        "RF",
+                                        "Unerrupted",
+                                        "For Exo",
+                                        "TF",
+                                        "Abutment",
+                                        "RCT",
+                                        "Impacted",
+                                    ][i] || ""}
+                                </td>
+
+                                {/* ===== LOWER LEFT ===== */}
+                                {[1, 2, 3, 4, 5, 6, 7, 8].map((num, idx) => (
+                                    <td
+                                        key={`ll-${i}-${num}`}
+                                        colSpan={2}
+                                        style={{
+                                            border: "1px solid black",
+                                            backgroundColor: isProblem(dental?.dental_lower_left?.[idx])
+                                                ? "black"
+                                                : "white",
+                                            color: isProblem(dental?.dental_lower_left?.[idx])
+                                                ? "white"
+                                                : "black",
+                                            fontWeight: "bold",
+                                        }}
+                                    >
+                                        {num}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+
                         <tr>
                             <td colSpan={40} style={{ padding: 0, margin: 0, fontSize: "12px", fontFamily: "Times new roman" }}>
                                 <div

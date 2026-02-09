@@ -32,7 +32,7 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import { MdOutlinePayment } from "react-icons/md";
 import { IoMdSchool } from "react-icons/io";
 import API_BASE_URL from "../apiConfig";
-const CertificateOfRegistration = forwardRef(
+const CORForCollege = forwardRef(
   ({ student_number }, divToPrintRef) => {
     const settings = useContext(SettingsContext);
     const [fetchedLogo, setFetchedLogo] = useState(null);
@@ -70,6 +70,7 @@ const CertificateOfRegistration = forwardRef(
     const secondLine = words.slice(middle).join(" ");
 
     const [data, setData] = useState([]);
+    const hasStudentData = Boolean(student_number?.trim() && data?.[0]);
 
     const [profilePicture, setProfilePicture] = useState(null);
     const [personID, setPersonID] = useState("");
@@ -175,7 +176,7 @@ const CertificateOfRegistration = forwardRef(
       fetchApprovedBy();
     }, []);
 
-    const pageId = 108;
+    const pageId = 13;
     const [employeeID, setEmployeeID] = useState("");
 
     useEffect(() => {
@@ -1088,8 +1089,8 @@ const CertificateOfRegistration = forwardRef(
                                   alt="School Logo"
                                   style={{
                                     marginLeft: "10px",
-                                    width: "140px",
-                                    height: "140px",
+                                    width: "120px",
+                                    height: "120px",
                                     borderRadius: "50%", // ✅ makes it circular
                                     objectFit: "cover",
                                   }}
@@ -3672,12 +3673,12 @@ const CertificateOfRegistration = forwardRef(
                       </td>
                       <td
                         colSpan={20}
-                        style={{ fontSize: "62.5%", textAlign: "center" }}
+                        style={{ fontSize: "62.5%", textAlign: "center", }}
                       >
                         {/* SIGNATURE IMAGE (optional) */}
                         {approvedBy?.signature_image && (
                           <img
-                            src={`${API_BASE_URL}/uploads/Applicant1by1/${approvedBy.signature_image}`}
+                            src={`${API_BASE_URL}/uploads/${approvedBy.signature_image}`}
                             alt="Signature"
                             style={{
                               height: "60px",
@@ -3685,6 +3686,7 @@ const CertificateOfRegistration = forwardRef(
                               width: "250px",
                               marginBottom: "2px",
                               marginLeft: "55px",
+                              display: !student_number ? "none" : "block"
                             }}
                           />
                         )}
@@ -3702,7 +3704,7 @@ const CertificateOfRegistration = forwardRef(
                           }}
                         >
                           {/* NAME (can be empty) */}
-                          <div style={{ minHeight: "14px" }}>
+                          <div style={{ minHeight: "14px", display: !student_number ? "none" : "block" }}>
                             {approvedBy?.full_name || ""}
                           </div>
 
@@ -3809,9 +3811,7 @@ const CertificateOfRegistration = forwardRef(
                     <tr>
                       <td
                         colSpan={12}
-                        style={{
-                          fontSize: "62.5%",
-                        }}
+
                       >
                         <input
                           type="text"
@@ -3864,7 +3864,7 @@ const CertificateOfRegistration = forwardRef(
                       <td
                         colSpan={9}
                         style={{
-                          fontSize: "62.5%",
+
                         }}
                       >
                         <input
@@ -3928,76 +3928,79 @@ const CertificateOfRegistration = forwardRef(
                   }}
                 >
                   <tbody>
-                    {/* TOP ROW: IMAGE (LEFT) + QR (RIGHT) */}
-                    <tr>
-                      {/* LEFT SIDE */}
+                    {/* MAIN ROW – HEIGHT 150px */}
+                    <tr style={{ height: "150px" }}>
+                      {/* LEFT SIDE – Free Tuition Logo */}
                       <td
-                        colSpan={20}
                         style={{
-                          textAlign: "left",
-                          paddingLeft: "50px", // margin-left effect
+                          width: "50%",
+                          paddingLeft: "50px",
+                          verticalAlign: "middle",
                         }}
                       >
                         <img
                           src={FreeTuitionImage}
-                          alt="EARIST MIS FEE"
+                          alt="Free Tuition"
                           style={{
-                            width: "175px",
-                            height: "125px",
+                            width: "600px",
+                            height: "150px",
+                            objectFit: "contain",
+                            display: "block",
                           }}
                         />
                       </td>
 
-                      {/* RIGHT SIDE */}
+                      {/* RIGHT SIDE – QR CODE + DATE */}
                       <td
-                        colSpan={20}
                         style={{
-                          textAlign: "right",
-                          paddingRight: "30px",
-                        }}
-                      >
-                        {student_number && (
-                          <img
-                            style={{ width: "150px", height: "150px" }}
-                            src={`${API_BASE_URL}/uploads/QrCodeGenerated/${student_number}_qrcode.png`}
-                            alt="QR Code"
-                          />
-                        )}
-                      </td>
-                    </tr>
-
-                    {/* DATE ROW */}
-                    <tr>
-                      <td
-                        colSpan={40} // spans full width
-                        style={{
-                          height: "0.25in",
-                          fontSize: "15px",
-                          textAlign: "right",
+                          width: "50%",
+                          paddingRight: "50px",
                           verticalAlign: "middle",
-                          paddingRight: "20px",
                         }}
                       >
-                        <input
-                          type="text"
-                          value={longDate}
-                          readOnly
+                        <div
                           style={{
-                            color: "black",
-                            textAlign: "right",
-                            width: "98%",
-                            border: "none",
-                            outline: "none",
-                            background: "none",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-end",
+                            justifyContent: "center",
+                            height: "150px",
                           }}
-                        />
+                        >
+                          {hasStudentData && (
+                            <img
+                              src={`${API_BASE_URL}/uploads/QrCodeGenerated/${student_number}_qrcode.png`}
+                              alt="QR Code"
+                              style={{
+                                width: "150px",
+                                height: "150px",
+                                marginBottom: "6px",
+                              }}
+                            />
+                          )}
+
+                          <input
+                            type="text"
+                            value={longDate}
+                            readOnly
+                            style={{
+                              color: "black",
+                              textAlign: "right",
+                              width: "200px",
+                              border: "none",
+                              outline: "none",
+                              background: "none",
+                              fontSize: "15px",
+                            }}
+                          />
+                        </div>
                       </td>
                     </tr>
 
                     {/* FOOTER */}
                     <tr>
                       <td
-                        colSpan={40} // spans full width
+                        colSpan={2}
                         style={{
                           height: "0.2in",
                           fontSize: "72.5%",
@@ -4032,4 +4035,4 @@ const CertificateOfRegistration = forwardRef(
   },
 );
 
-export default CertificateOfRegistration;
+export default CORForCollege;

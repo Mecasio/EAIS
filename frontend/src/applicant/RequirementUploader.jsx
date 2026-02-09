@@ -117,7 +117,7 @@ const RequirementUploader = () => {
       if (!allRequirementsCompleted && allRequiredUploaded) {
         setSnack({
           open: true,
-          message: `🎉 Congratulations! You have successfully submitted your application to ${companyName}. Please check your Gmail account or your Applicant Dashboard regularly to stay updated on your current step, as indicated in the stepper below.`,
+          message: `🎉 Congratulations! You have successfully submitted your application to ${companyName}. Please check your Gmail Account or your Applicant Dashboard regularly to stay updated on your current step, as indicated in the stepper below.`,
 
           severity: "success",
         });

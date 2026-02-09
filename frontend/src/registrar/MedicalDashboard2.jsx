@@ -74,7 +74,6 @@ const MedicalDashboard2 = () => {
         { label: "Medical History", to: "/medical_requirements_form", icon: <PersonIcon /> },
         { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon /> },
         { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <SchoolIcon /> },
-
     ];
 
 
@@ -653,7 +652,7 @@ const MedicalDashboard2 = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-       return <LoadingOverlay open={loading} message="Loading..." />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -664,7 +663,7 @@ const MedicalDashboard2 = () => {
 
     // dot not alter
     return (
-          <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+        <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
             {showPrintView && (
                 <div ref={divToPrintRef} style={{ display: "block" }}>
                     <ExamPermit personId={userID} />   {/* ✅ pass the searched person_id */}
@@ -718,23 +717,23 @@ const MedicalDashboard2 = () => {
                         <Card
                             onClick={() => handleNavigateStep(index, step.to)}
                             sx={{
-                                flex: `1 1 ${100 / stepsData.length}%`, // evenly divide width
-                                height: 120,
+                                flex: `1 1 ${100 / stepsData.length}%`, // evenly divide row
+                                height: 135,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 cursor: "pointer",
                                 borderRadius: 2,
                                 border: `2px solid ${borderColor}`,
-                                backgroundColor: currentStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
-                                color: currentStep === index ? "#fff" : "#000",
+                                backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                                color: activeStep === index ? "#fff" : "#000",
                                 boxShadow:
-                                    currentStep === index
+                                    activeStep === index
                                         ? "0px 4px 10px rgba(0,0,0,0.3)"
                                         : "0px 2px 6px rgba(0,0,0,0.15)",
                                 transition: "0.3s ease",
                                 "&:hover": {
-                                    backgroundColor: currentStep === index ? "#000" : "#f5d98f",
+                                    backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
                                 },
                             }}
                         >
@@ -1948,21 +1947,21 @@ const MedicalDashboard2 = () => {
                                     onBlur={handleBlur}
                                 >
                                     <MenuItem value=""><em>Select Guardian</em></MenuItem>
-                                                   <MenuItem value="Father">Father</MenuItem>
-                                                   <MenuItem value="Mother">Mother</MenuItem>
-                                                   <MenuItem value="Brother/Sister">Brother/Sister</MenuItem>
-                                                   <MenuItem value="Uncle">Uncle</MenuItem>
-                                                   <MenuItem value="Aunt">Aunt</MenuItem>
-                                                   <MenuItem value="StepFather">Stepfather</MenuItem>
-                                                   <MenuItem value="StepMother">Stepmother</MenuItem>
-                                                   <MenuItem value="Cousin">Cousin</MenuItem>
-                                                   <MenuItem value="Father in Law">Father-in-law</MenuItem>
-                                                   <MenuItem value="Mother in Law">Mother-in-law</MenuItem>
-                                                   <MenuItem value="Sister in Law">Sister-in-law</MenuItem>
-                                                   <MenuItem value="GrandMother">GrandMother</MenuItem>
-                                                   <MenuItem value="GrandFather">GrandFather</MenuItem>
-                                                   <MenuItem value="Spouse">Spouse</MenuItem>
-                                                   <MenuItem value="Others">Others</MenuItem>
+                                    <MenuItem value="Father">Father</MenuItem>
+                                    <MenuItem value="Mother">Mother</MenuItem>
+                                    <MenuItem value="Brother/Sister">Brother/Sister</MenuItem>
+                                    <MenuItem value="Uncle">Uncle</MenuItem>
+                                    <MenuItem value="Aunt">Aunt</MenuItem>
+                                    <MenuItem value="StepFather">Stepfather</MenuItem>
+                                    <MenuItem value="StepMother">Stepmother</MenuItem>
+                                    <MenuItem value="Cousin">Cousin</MenuItem>
+                                    <MenuItem value="Father in Law">Father-in-law</MenuItem>
+                                    <MenuItem value="Mother in Law">Mother-in-law</MenuItem>
+                                    <MenuItem value="Sister in Law">Sister-in-law</MenuItem>
+                                    <MenuItem value="GrandMother">GrandMother</MenuItem>
+                                    <MenuItem value="GrandFather">GrandFather</MenuItem>
+                                    <MenuItem value="Spouse">Spouse</MenuItem>
+                                    <MenuItem value="Others">Others</MenuItem>
                                 </Select>
 
                             </FormControl>

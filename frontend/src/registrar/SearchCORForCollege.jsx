@@ -16,7 +16,7 @@ import {
   Alert,
 } from "@mui/material";
 import '../styles/Print.css'
-import CertificateOfRegistration from './CertificateOfRegistrationForRegistrar';
+import CORForCollege from '../registrar/CORForCollege'
 import SearchIcon from "@mui/icons-material/Search";
 import { FcPrint } from "react-icons/fc";
 import AssignmentIcon from "@mui/icons-material/Assignment";
@@ -35,7 +35,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 
-const SearchCertificateOfRegistration = () => {
+const SearchCORForCollege = () => {
   const settings = useContext(SettingsContext);
 
   const [titleColor, setTitleColor] = useState("#000000");
@@ -504,7 +504,7 @@ const SearchCertificateOfRegistration = () => {
         </span>
       </button>
 
-      <CertificateOfRegistration ref={divToPrintRef} student_number={debouncedStudentNumber} />
+      <CORForCollege ref={divToPrintRef} student_number={debouncedStudentNumber} />
 
       <Snackbar
         open={openSnackbar}
@@ -520,4 +520,4 @@ const SearchCertificateOfRegistration = () => {
   );
 };
 
-export default SearchCertificateOfRegistration;
+export default SearchCORForCollege;

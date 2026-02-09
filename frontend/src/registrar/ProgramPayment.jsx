@@ -160,7 +160,7 @@ const CurriculumCourseMap = () => {
   };
 
   const fetchTaggedPrograms = async () => {
-    const res = await axios.get(`${API_BASE_URL}/prgram_tagging_list`);
+    const res = await axios.get(`${API_BASE_URL}/program_tagging_list`);
     // map to include is_nstp, iscomputer_lab, isnon_computer_lab
     // Directly use the flags from the API
     const tagged = res.data.map(p => ({

@@ -68,15 +68,14 @@ const MedicalDashboard4 = () => {
 
 
 
-    const stepsData = [
-        { label: "Medical Applicant List", to: "/medical_applicant_list", icon: <ListAltIcon /> },
-        { label: "Applicant Form", to: "/medical_dashboard1", icon: <HowToRegIcon /> },
-        { label: "Submitted Documents", to: "/medical_requirements", icon: <UploadFileIcon /> }, // updated icon
-        { label: "Medical History", to: "/medical_requirements_form", icon: <PersonIcon /> },
-        { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon /> },
-        { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <SchoolIcon /> },
-
-    ];
+        const stepsData = [
+            { label: "Medical Applicant List", to: "/medical_applicant_list", icon: <ListAltIcon /> },
+            { label: "Applicant Form", to: "/medical_dashboard1", icon: <HowToRegIcon /> },
+            { label: "Submitted Documents", to: "/medical_requirements", icon: <UploadFileIcon /> }, // updated icon
+            { label: "Medical History", to: "/medical_requirements_form", icon: <PersonIcon /> },
+            { label: "Dental Assessment", to: "/dental_assessment", icon: <DescriptionIcon /> },
+            { label: "Physical and Neurological Examination", to: "/physical_neuro_exam", icon: <SchoolIcon /> },
+        ];
 
     const handleNavigateStep = (index, to) => {
         setCurrentStep(index);
@@ -163,50 +162,50 @@ const MedicalDashboard4 = () => {
 
 
     const location = useLocation();
- 
+
     const queryParams = new URLSearchParams(location.search);
     const queryPersonId = queryParams.get("person_id")?.trim() || "";
-  
+
     useEffect(() => {
-      const storedUser = localStorage.getItem("email");
-      const storedRole = localStorage.getItem("role");
-      const loggedInPersonId = localStorage.getItem("person_id");
-  
-      if (!storedUser || !storedRole || !loggedInPersonId) {
-        window.location.href = "/login";
-        return;
-      }
-  
-      setUser(storedUser);
-      setUserRole(storedRole);
-  
-      const allowedRoles = ["registrar", "applicant", "superadmin"];
-      if (!allowedRoles.includes(storedRole)) {
-        window.location.href = "/login";
-        return;
-      }
-  
-      const lastSelected = sessionStorage.getItem("admin_edit_person_id");
-  
-      // ⭐ CASE 1: URL HAS ?person_id=
-      if (queryPersonId !== "") {
-        sessionStorage.setItem("admin_edit_person_id", queryPersonId);
-        setUserID(queryPersonId);
-        return;
-      }
-  
-      // ⭐ CASE 2: URL has NO ID but we have a last selected student
-      if (lastSelected) {
-        setUserID(lastSelected);
-        return;
-      }
-  
-      // ⭐ CASE 3: No URL ID and no last selected → start blank
-      setUserID("");
+        const storedUser = localStorage.getItem("email");
+        const storedRole = localStorage.getItem("role");
+        const loggedInPersonId = localStorage.getItem("person_id");
+
+        if (!storedUser || !storedRole || !loggedInPersonId) {
+            window.location.href = "/login";
+            return;
+        }
+
+        setUser(storedUser);
+        setUserRole(storedRole);
+
+        const allowedRoles = ["registrar", "applicant", "superadmin"];
+        if (!allowedRoles.includes(storedRole)) {
+            window.location.href = "/login";
+            return;
+        }
+
+        const lastSelected = sessionStorage.getItem("admin_edit_person_id");
+
+        // ⭐ CASE 1: URL HAS ?person_id=
+        if (queryPersonId !== "") {
+            sessionStorage.setItem("admin_edit_person_id", queryPersonId);
+            setUserID(queryPersonId);
+            return;
+        }
+
+        // ⭐ CASE 2: URL has NO ID but we have a last selected student
+        if (lastSelected) {
+            setUserID(lastSelected);
+            return;
+        }
+
+        // ⭐ CASE 3: No URL ID and no last selected → start blank
+        setUserID("");
     }, [queryPersonId]);
-  
-  
- 
+
+
+
     const [selectedPerson, setSelectedPerson] = useState(null);
 
     const fetchByPersonId = async (personID) => {
@@ -416,27 +415,27 @@ const MedicalDashboard4 = () => {
     };
 
 
-  
- const links = [
-    {
-      to: userID ? `/admin_ecat_application_form?person_id=${userID}` : "/admin_ecat_application_form",
-      label: "ECAT Application Form",
-    },
-    {
-      to: userID ? `/admin_admission_form_process?person_id=${userID}` : "/admin_admission_form_process",
-      label: "Admission Form Process",
-    },
-    {
-      to: userID ? `/admin_personal_data_form?person_id=${userID}` : "/admin_personal_data_form",
-      label: "Personal Data Form",
-    },
-    {
-      to: userID ? `/admin_office_of_the_registrar?person_id=${userID}` : "/admin_office_of_the_registrar",
-      label: `Application For ${shortTerm ? shortTerm.toUpperCase() : ""} College Admission`,
-    },
-    { to: "/admission_services", label: "Application/Student Satisfactory Survey" },
-   
-  ];
+
+    const links = [
+        {
+            to: userID ? `/admin_ecat_application_form?person_id=${userID}` : "/admin_ecat_application_form",
+            label: "ECAT Application Form",
+        },
+        {
+            to: userID ? `/admin_admission_form_process?person_id=${userID}` : "/admin_admission_form_process",
+            label: "Admission Form Process",
+        },
+        {
+            to: userID ? `/admin_personal_data_form?person_id=${userID}` : "/admin_personal_data_form",
+            label: "Personal Data Form",
+        },
+        {
+            to: userID ? `/admin_office_of_the_registrar?person_id=${userID}` : "/admin_office_of_the_registrar",
+            label: `Application For ${shortTerm ? shortTerm.toUpperCase() : ""} College Admission`,
+        },
+        { to: "/admission_services", label: "Application/Student Satisfactory Survey" },
+
+    ];
 
 
 
@@ -472,7 +471,7 @@ const MedicalDashboard4 = () => {
 
     // Put this at the very bottom before the return 
     if (loading || hasAccess === null) {
-       return <LoadingOverlay open={loading} message="Loading..." />;
+        return <LoadingOverlay open={loading} message="Loading..." />;
     }
 
     if (!hasAccess) {
@@ -484,7 +483,7 @@ const MedicalDashboard4 = () => {
 
     // dot not alter
     return (
-            <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
+        <Box sx={{ height: "calc(100vh - 150px)", overflowY: "auto", paddingRight: 1, backgroundColor: "transparent", mt: 1, padding: 2 }}>
             {showPrintView && (
                 <div ref={divToPrintRef} style={{ display: "block" }}>
                     <ExamPermit personId={userID} />   {/* ✅ pass the searched person_id */}
@@ -538,23 +537,23 @@ const MedicalDashboard4 = () => {
                         <Card
                             onClick={() => handleNavigateStep(index, step.to)}
                             sx={{
-                                flex: `1 1 ${100 / stepsData.length}%`, // evenly divide width
-                                height: 120,
+                                flex: `1 1 ${100 / stepsData.length}%`, // evenly divide row
+                                height: 135,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 cursor: "pointer",
                                 borderRadius: 2,
                                 border: `2px solid ${borderColor}`,
-                                backgroundColor: currentStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
-                                color: currentStep === index ? "#fff" : "#000",
+                                backgroundColor: activeStep === index ? settings?.header_color || "#1976d2" : "#E8C999",
+                                color: activeStep === index ? "#fff" : "#000",
                                 boxShadow:
-                                    currentStep === index
+                                    activeStep === index
                                         ? "0px 4px 10px rgba(0,0,0,0.3)"
                                         : "0px 2px 6px rgba(0,0,0,0.15)",
                                 transition: "0.3s ease",
                                 "&:hover": {
-                                    backgroundColor: currentStep === index ? "#000" : "#f5d98f",
+                                    backgroundColor: activeStep === index ? "#000000" : "#f5d98f",
                                 },
                             }}
                         >
@@ -622,75 +621,75 @@ const MedicalDashboard4 = () => {
                 </Table>
             </TableContainer>
 
-   
-  <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          width: "100%",
-          mt: 2,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 2,
-            p: 2,
-            borderRadius: "10px",
-            backgroundColor: "#fffaf5",
-            border: "1px solid #6D2323",
-            boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
-            width: "100%",
-            overflow: "hidden",
-          }}
-        >
-          {/* Icon */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              backgroundColor: "#800000",
-              borderRadius: "8px",
-              width: 60,
-              height: 60,
-              flexShrink: 0,
-            }}
-          >
-            <ErrorIcon sx={{ color: "white", fontSize: 40 }} />
-          </Box>
 
-          {/* Text */}
-          <Typography
-            sx={{
-              fontSize: "20px",
-              fontFamily: "Arial",
-              color: "#3e3e3e",
-              lineHeight: 1.3, // slightly tighter to fit in fewer rows
-              whiteSpace: "normal",
-              overflow: "hidden",
-            }}
-          >
-            <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
-            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span> Kindly type 'NA' in boxes where there are no possible answers to the information being requested. &nbsp;  &nbsp; <br />
-            <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px', marginLeft: "100px", }}>➔</span> To make use of the letter 'Ñ', please press ALT while typing "165", while for 'ñ', please press ALT while typing "164"
+            <Box
+                sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    width: "100%",
+                    mt: 2,
+                }}
+            >
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 2,
+                        p: 2,
+                        borderRadius: "10px",
+                        backgroundColor: "#fffaf5",
+                        border: "1px solid #6D2323",
+                        boxShadow: "0px 2px 8px rgba(0, 0, 0, 0.05)",
+                        width: "100%",
+                        overflow: "hidden",
+                    }}
+                >
+                    {/* Icon */}
+                    <Box
+                        sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            backgroundColor: "#800000",
+                            borderRadius: "8px",
+                            width: 60,
+                            height: 60,
+                            flexShrink: 0,
+                        }}
+                    >
+                        <ErrorIcon sx={{ color: "white", fontSize: 40 }} />
+                    </Box>
 
-          </Typography>
-        </Box>
-      </Box>
+                    {/* Text */}
+                    <Typography
+                        sx={{
+                            fontSize: "20px",
+                            fontFamily: "Arial",
+                            color: "#3e3e3e",
+                            lineHeight: 1.3, // slightly tighter to fit in fewer rows
+                            whiteSpace: "normal",
+                            overflow: "hidden",
+                        }}
+                    >
+                        <strong style={{ color: "maroon" }}>Notice:</strong> &nbsp;
+                        <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px' }}>➔</span> Kindly type 'NA' in boxes where there are no possible answers to the information being requested. &nbsp;  &nbsp; <br />
+                        <strong></strong> <span style={{ fontSize: '1.2em', margin: '0 15px', marginLeft: "100px", }}>➔</span> To make use of the letter 'Ñ', please press ALT while typing "165", while for 'ñ', please press ALT while typing "164"
 
-      <h1
-        style={{
-          fontSize: "30px",
-          fontWeight: "bold",
-          textAlign: "center",
-          color: "black",
-          marginTop: "25px",
-        }}
-      >
-        LISTS OF ALL PRINTABLE FILES
-      </h1>
+                    </Typography>
+                </Box>
+            </Box>
+
+            <h1
+                style={{
+                    fontSize: "30px",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    color: "black",
+                    marginTop: "25px",
+                }}
+            >
+                LISTS OF ALL PRINTABLE FILES
+            </h1>
 
 
 
