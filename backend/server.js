@@ -40,6 +40,7 @@ const allowedOrigins = [
   'http://192.168.50.211:5173',
   'http://136.239.248.58:5173',
   'http://192.168.50.45:5173',
+  'http://192.168.0.180:5173',
 ];
 
 app.use(
@@ -92,6 +93,8 @@ const medicalExamRoute = require("./routes/admission_routes/medicalExamRoute");
 const qrCodeForStudents = require("./routes/qrCodeForStudents");
 const studentPayment = require('./routes/payment/studentScholarship');
 const programRoute = require("./routes/system_routes/programRoute");
+const dataMigrationRoute = require("./routes/data_migration_route.jsx/import");
+const uploadedDataRoute = require("./routes/data_migration_route.jsx/uploadedData");
 
 app.use("/", programRoute);
 app.use("/auth/", authRoute);
@@ -111,6 +114,8 @@ app.use("/", QualifyingInterviewExam);
 app.use("/", medicalExamRoute);
 app.use("/", qrCodeForStudents);
 app.use("/", studentPayment);
+app.use("/", dataMigrationRoute);
+app.use("/", uploadedDataRoute);  
 
 const uploadPath = path.join(__dirname, "uploads");
 

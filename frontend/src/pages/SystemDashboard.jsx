@@ -193,6 +193,14 @@ const SystemDashboardPanel = () => {
       ],
     },
     {
+      label: "DATA MIGRATION & IMPORT",
+      items: [
+
+        { title: "UPLOAD ENROLLED SUBJECT", link: "/upload_enrolled_subject", icon: HelpOutlineIcon, page_id: 117 },
+        { title: "MIGRATION DATA PANEL", link: "/migration_data_panel", icon: HelpOutlineIcon, page_id: 114 },
+      ],
+    },
+    {
       label: "YEAR & SCHOOL MANAGEMENT",
       items: [
         { title: "YEAR UPDATE PANEL", link: "/year_update_panel", icon: Update, page_id: 65 },
