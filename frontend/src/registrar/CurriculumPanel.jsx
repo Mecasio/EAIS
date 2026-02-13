@@ -383,7 +383,7 @@ const CurriculumPanel = () => {
                 <option value="">Choose Program</option>
                 {programList.map((program) => (
                   <option key={program.program_id} value={program.program_id}>
-                    ({program.program_code}) - {program.program_description} {program.major}
+                    ({program.program_code}) - {program.program_description} {program.major} ({program.components === 0 ? "Manila" : "Cavite" })
 
                   </option>
                 ))}
@@ -453,7 +453,7 @@ const CurriculumPanel = () => {
                         </TableCell >
                         <TableCell sx={{ border: `2px solid ${borderColor}` }}>
                           <Typography fontWeight={500}>
-                            ({item.program_code}) {item.program_description}
+                            ({item.program_code}) {item.program_description} ({item.components === 0 ? "Manila" : "Cavite" })
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {item.major}

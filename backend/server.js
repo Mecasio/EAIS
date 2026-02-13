@@ -91,6 +91,9 @@ const QualifyingInterviewExam = require("./routes/admission_routes/QualifyingInt
 const medicalExamRoute = require("./routes/admission_routes/medicalExamRoute");
 const qrCodeForStudents = require("./routes/qrCodeForStudents");
 const studentPayment = require('./routes/payment/studentScholarship');
+const programRoute = require("./routes/system_routes/programRoute");
+
+app.use("/", programRoute);
 app.use("/auth/", authRoute);
 app.use("/form/", applicantFormRoute);
 app.use("/exampermit/", examPermit);
@@ -286,6 +289,7 @@ const announcementUpload = multer({ storage: announcementStorage });
 const upload = multer({ storage: multer.memoryStorage() });
 
 const nodemailer = require("nodemailer");
+const { error } = require("console");
 
 // Middleware to check if user can access a step
 const checkStepAccess = (requiredStep) => {
@@ -8605,160 +8609,6 @@ app.delete("/delete_department/:id", async (req, res) => {
   }
 });
 
-// ---------------------------- PROGRAM PANEL ---------------------------------- //
-
-app.post("/program", async (req, res) => {
-  const { name, code, major } = req.body;
-
-  try {
-    const normalize = (v) => v.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-
-    const normalized_code = normalize(code);
-
-    const [rows] = await db3.query("SELECT program_code FROM program_table");
-
-    const isDuplicate = rows.some((row) => {
-      const normalized_db_code = normalize(row.program_code);
-      return normalized_code === normalized_db_code;
-    });
-
-    if (isDuplicate) {
-      return res.status(400).json({
-        message: "Program is already exists",
-      });
-    }
-
-    const insertQuery = `
-      INSERT INTO program_table (program_description, program_code, major)
-      VALUES (?, ?, ?)
-    `;
-
-    await db3.query(insertQuery, [name, code, major]);
-    res.status(200).json({ message: "Program created successfully" });
-  } catch (err) {
-    console.error("Error creating program:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-// -------------------- GET PROGRAMS --------------------
-app.get("/get_program", async (req, res) => {
-  const programQuery = "SELECT * FROM program_table";
-
-  try {
-    const [result] = await db3.query(programQuery);
-    res.status(200).send(result);
-  } catch (err) {
-    console.error("Error fetching programs:", err);
-    res.status(500).send({ message: "Internal Server Error" });
-  }
-});
-
-// -------------------- UPDATE PROGRAM -------------------- //
-
-app.put("/program/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name, code, major } = req.body;
-
-  try {
-    // 1. Normalize user input
-    const normalize = (v) => v.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-
-    const normalized_code = normalize(code);
-
-    // 2. Get all programs except the current one
-    const [rows] = await db3.query(
-      "SELECT program_code FROM program_table WHERE program_id != ?",
-      [id],
-    );
-
-    // 3. Compare normalized versions
-    const isDuplicate = rows.some((row) => {
-      const normalized_db_code = normalize(row.program_code);
-      return normalized_db_code === normalized_code;
-    });
-
-    if (isDuplicate) {
-      return res.status(400).json({
-        message: "Program is already exists",
-      });
-    }
-
-    // 4. Update program
-    await db3.query(
-      `
-      UPDATE program_table
-      SET program_description = ?, program_code = ?, major = ?
-      WHERE program_id = ?
-      `,
-      [name, code, major, id],
-    );
-
-    res.json({ message: "Program updated successfully" });
-  } catch (err) {
-    console.error("Error updating program:", err);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-});
-
-// -------------------- DELETE PROGRAM --------------------
-app.delete("/program/:id", async (req, res) => {
-  const { id } = req.params;
-
-  const deleteQuery = "DELETE FROM program_table WHERE program_id = ?";
-
-  try {
-    const [result] = await db3.query(deleteQuery, [id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).send({ message: "Program not found" });
-    }
-    res.status(200).send({ message: "Program deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting program:", err);
-    res.status(500).send({ message: "Internal Server Error" });
-  }
-});
-
-// -------------------- SUPERADMIN UPDATE PROGRAM --------------------
-app.put("/update_program/:id", async (req, res) => {
-  const { id } = req.params;
-  const { name, code, major } = req.body; // include major
-
-  const updateQuery = `
-    UPDATE program_table 
-    SET program_description = ?, program_code = ?, major = ?
-    WHERE id = ?
-  `;
-
-  try {
-    const [result] = await db3.query(updateQuery, [name, code, major, id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).send({ message: "Program not found" });
-    }
-    res.status(200).send({ message: "Program updated successfully" });
-  } catch (err) {
-    console.error("Error updating program:", err);
-    res.status(500).send({ message: "Internal Server Error" });
-  }
-});
-
-// -------------------- SUPERADMIN DELETE PROGRAM --------------------
-app.delete("/delete_program/:id", async (req, res) => {
-  const { id } = req.params;
-
-  const deleteQuery = "DELETE FROM program_table WHERE id = ?";
-
-  try {
-    const [result] = await db3.query(deleteQuery, [id]);
-    if (result.affectedRows === 0) {
-      return res.status(404).send({ message: "Program not found" });
-    }
-    res.status(200).send({ message: "Program deleted successfully" });
-  } catch (err) {
-    console.error("Error deleting program:", err);
-    res.status(500).send({ message: "Internal Server Error" });
-  }
-});
 
 // -------------------------------- CURRICULUM PANEL ------------------------------------ //
 
@@ -19733,6 +19583,7 @@ ORDER BY dt.dprtmnt_code, pgt.program_code, pt.last_name;
     res.status(500).json({ error: "Failed fetching students" });
   }
 });
+
 
 
 const PORT = process.env.WEB_PORT || 5000;

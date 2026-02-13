@@ -574,14 +574,12 @@ const CurriculumCourseMap = () => {
           </MenuItem>
           {curriculumList.map((c, item) => (
             <MenuItem key={c.curriculum_id} value={c.curriculum_id}>
-              {formatSchoolYear(c.year_description)}: ({c.program_code}) – {c.program_description}
+              {formatSchoolYear(c.year_description)}: ({c.program_code}) – {c.program_description} ({c.components === 0 ? "Manila" : "Cavite" })
               {c.major ? ` (${c.major})` : ""}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
-
-
 
       {/* YEARS */}
       {selectedCurriculum &&

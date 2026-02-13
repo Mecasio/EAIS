@@ -1686,7 +1686,8 @@ const MedicalDashboard1 = () => {
                         <MenuItem value=""><em>Select Program</em></MenuItem>
                         {curriculumOptions.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            ({item.program_code}) - {item.program_description} {item.major}
+                               ({item.program_code}) {item.program_description}{" "}
+                              {item.major} ({item.components === 0 ? "Manila" : "Cavite" })
                           </MenuItem>
                         ))}
                       </Select>
@@ -1711,7 +1712,8 @@ const MedicalDashboard1 = () => {
                                <MenuItem value=""><em>Select Program</em></MenuItem>
                                {curriculumOptions.map((item, index) => (
                                  <MenuItem key={index} value={item.curriculum_id}>
-                                   ({item.program_code}) - {item.program_description} {item.major}
+                                      ({item.program_code}) {item.program_description}{" "}
+                              {item.major} ({item.components === 0 ? "Manila" : "Cavite" })
                                  </MenuItem>
                                ))}
                              </Select>
@@ -1735,7 +1737,8 @@ const MedicalDashboard1 = () => {
                                <MenuItem value=""><em>Select Program</em></MenuItem>
                                {curriculumOptions.map((item, index) => (
                                  <MenuItem key={index} value={item.curriculum_id}>
-                                   ({item.program_code}) - {item.program_description} {item.major}
+                                      ({item.program_code}) {item.program_description}{" "}
+                              {item.major} ({item.components === 0 ? "Manila" : "Cavite" })
                                  </MenuItem>
                                ))}
                              </Select>

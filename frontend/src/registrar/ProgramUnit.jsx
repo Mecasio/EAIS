@@ -333,7 +333,7 @@ const ProgramUnit = () => {
                     {curriculumList.map((c) => (
                         <MenuItem key={c.curriculum_id} value={c.curriculum_id}>
                             {formatSchoolYear(c.year_description)} – ({c.program_code}) – {c.program_description}
-                            {c.major ? ` (${c.major})` : ""}
+                            {c.major ? ` (${c.major})` : ""} ({c.components === 0 ? "Manila" : "Cavite" })
                         </MenuItem>
                     ))}
                 </Select>

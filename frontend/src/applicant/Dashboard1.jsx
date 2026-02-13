@@ -1465,7 +1465,7 @@ const Dashboard1 = (props) => {
                               }}
                             >
                               ({item.program_code}) {item.program_description}{" "}
-                              {item.major}
+                              {item.major} ({item.components === 0 ? "Manila" : "Cavite" })
                               {/* Slot info */}
                               {isFull ? (
                                 <span style={{ marginLeft: 8 }}>
@@ -1502,7 +1502,8 @@ const Dashboard1 = (props) => {
                         <MenuItem value=""><em>Select Program</em></MenuItem>
                         {curriculumOptions.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            ({item.program_code}) - {item.program_description} {item.major}
+                               ({item.program_code}) {item.program_description}{" "}
+                              {item.major} ({item.components === 0 ? "Manila" : "Cavite" })
                           </MenuItem>
                         ))}
                       </Select>
@@ -1526,7 +1527,8 @@ const Dashboard1 = (props) => {
                         <MenuItem value=""><em>Select Program</em></MenuItem>
                         {curriculumOptions.map((item, index) => (
                           <MenuItem key={index} value={item.curriculum_id}>
-                            ({item.program_code}) - {item.program_description} {item.major}
+                               ({item.program_code}) {item.program_description}{" "}
+                              {item.major} ({item.components === 0 ? "Manila" : "Cavite" })
                           </MenuItem>
                         ))}
                       </Select>

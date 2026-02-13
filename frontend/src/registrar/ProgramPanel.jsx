@@ -63,7 +63,13 @@ const ProgramPanel = () => {
     if (settings.campus_address) setCampusAddress(settings.campus_address);
   }, [settings]);
 
-  const [program, setProgram] = useState({ name: "", code: "", major: "" });
+  const [program, setProgram] = useState({
+    name: "",
+    code: "",
+    major: "",
+    components: "",
+  });
+
 
   const [programs, setPrograms] = useState([]);
   const [editMode, setEditMode] = useState(false);
@@ -174,7 +180,13 @@ const ProgramPanel = () => {
         });
       }
 
-      setProgram({ name: "", code: "" });
+      setProgram({
+        name: "",
+        code: "",
+        major: "",
+        components: "",
+      });
+
       setEditMode(false);
       setEditId(null);
       fetchPrograms();
@@ -193,7 +205,9 @@ const ProgramPanel = () => {
       name: prog.program_description,
       code: prog.program_code,
       major: prog.major || "",
+      components: prog.components || "",
     });
+
     setEditMode(true);
     setEditId(prog.program_id);
   };
@@ -229,7 +243,10 @@ const ProgramPanel = () => {
     return (
       prog.program_description?.toLowerCase().includes(q) ||
       prog.program_code?.toLowerCase().includes(q) ||
-      prog.major?.toLowerCase().includes(q)
+      prog.major?.toLowerCase().includes(q) ||
+      (prog.components === 0 && "manila".includes(q)) ||
+      (prog.components === 1 && "cavite".includes(q))
+
     );
   });
 
@@ -489,6 +506,25 @@ const ProgramPanel = () => {
               style={styles.input}
             />
           </div>
+          <div style={styles.formGroup}>
+            <label htmlFor="program_components" style={styles.label}>
+              Campus:
+            </label>
+
+            <select
+              id="program_components"
+              name="components"
+              value={program.components}
+              onChange={handleChangesForEverything}
+              style={styles.input}
+            >
+              <option value="">-- Select Campus --</option>
+              <option value="0">Manila</option>
+              <option value="1">Cavite</option>
+            </select>
+          </div>
+
+
 
 
           <Button
@@ -509,7 +545,7 @@ const ProgramPanel = () => {
         <div style={styles.displaySection}>
           <Typography
             variant="h6"
-            sx={{ mb: 2, textAlign: "center", color: subtitleColor, fontWeight: "bold"}}
+            sx={{ mb: 2, textAlign: "center", color: subtitleColor, fontWeight: "bold" }}
           >
             Program List
           </Typography>
@@ -519,7 +555,7 @@ const ProgramPanel = () => {
               <Table size="small">
                 <TableHead sx={{ backgroundColor: '#6D2323', color: "white" }}>
                   <TableRow>
-                    <TableCell colSpan={10} sx={{ border: `2px solid ${borderColor}`, py: 0.5, backgroundColor: settings?.header_color || "#1976d2", color: "white" }}>
+                    <TableCell colSpan={20} sx={{ border: `2px solid ${borderColor}`, py: 0.5, backgroundColor: settings?.header_color || "#1976d2", color: "white" }}>
                       <Box
                         display="flex"
                         justifyContent="flex-end"
@@ -689,6 +725,7 @@ const ProgramPanel = () => {
                   <th style={styles.th}>Description</th>
                   <th style={styles.th}>Code</th>
                   <th style={styles.th}>Major</th>
+                  <th style={styles.th}>Components</th>
                   <th style={styles.th}>Actions</th>
                 </tr>
               </thead>
@@ -700,6 +737,14 @@ const ProgramPanel = () => {
                     <td style={styles.td}>{prog.program_description}</td>
                     <td style={styles.td}>{prog.program_code}</td>
                     <td style={styles.td}>{prog.major || "—"}</td>
+                    <td style={styles.td}>
+                      {prog.components === 0
+                        ? "Manila"
+                        : prog.components === 1
+                          ? "Cavite"
+                          : "—"}
+                    </td>
+
                     <td style={{ ...styles.td, textAlign: "center" }}>
                       <button
                         onClick={() => handleEdit(prog)}
