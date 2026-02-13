@@ -809,7 +809,7 @@ const UploadEnrolledSubject = () => {
                     <TableCell
                         colSpan={8}
                         align="center"
-                        sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}
+                        sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1, height: "120px" }}
                     >
                     No uploaded data yet.
                     </TableCell>
