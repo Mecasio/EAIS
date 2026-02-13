@@ -11,6 +11,10 @@ router.get("/get_uploaded_students", async (req, res) => {
         pt.first_name,
         pt.last_name,
         pt.middle_name,
+        dt.dprtmnt_id,
+        dt.dprtmnt_name,
+        dt.dprtmnt_code,
+        cct.curriculum_id,
         pgt.program_id,
         pgt.program_description,
         pgt.program_code,
@@ -27,6 +31,8 @@ router.get("/get_uploaded_students", async (req, res) => {
       INNER JOIN person_table pt ON snt.person_id = pt.person_id
       INNER JOIN person_status_table pst ON pt.person_id = pst.person_id
       INNER JOIN curriculum_table cct ON sst.active_curriculum = cct.curriculum_id
+      LEFT JOIN dprtmnt_curriculum_table dct ON cct.curriculum_id = dct.curriculum_id
+      LEFT JOIN dprtmnt_table dt ON dct.dprtmnt_id = dt.dprtmnt_id
       INNER JOIN program_table pgt ON cct.program_id = pgt.program_id
       INNER JOIN year_level_table ylt ON sst.year_level_id = ylt.year_level_id
       INNER JOIN active_school_year_table sy ON sst.active_school_year_id = sy.id

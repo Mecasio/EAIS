@@ -19,7 +19,6 @@ import {
   LinearProgress,
   Snackbar,
   Alert,
-  Grid,
   FormControl,
   Select,
   MenuItem,
@@ -41,6 +40,15 @@ const PROGRESS_STEPS = [
   { key: 'extracting', label: 'Extracting mapped values' },
   { key: 'saving', label: 'Saving to database' },
 ];
+
+const FILTER_MENU_PROPS = {
+    PaperProps: {
+        sx: {
+            maxHeight: 250,
+            marginTop: "5px"
+        },
+    },
+};
 
 const UploadEnrolledSubject = () => {
     const settings = useContext(SettingsContext);
@@ -68,8 +76,16 @@ const UploadEnrolledSubject = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [campus, setCampus] = useState('1');
     const [studentUploaded, setStudentUploaded] = useState([]);
+    const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState("");
     const [selectedProgramFilter, setSelectedProgramFilter] = useState("");
+    const [selectedSchoolYearFilter, setSelectedSchoolYearFilter] = useState("");
+    const [selectedSemesterFilter, setSelectedSemesterFilter] = useState("");
     const [selectedYearLevelFilter, setSelectedYearLevelFilter] = useState("");
+    const [departmentFilters, setDepartmentFilters] = useState([]);
+    const [programFilters, setProgramFilters] = useState([]);
+    const [schoolYearFilters, setSchoolYearFilters] = useState([]);
+    const [semesterFilters, setSemesterFilters] = useState([]);
+    const [yearLevelFilters, setYearLevelFilters] = useState([]);
     const [sortOption, setSortOption] = useState("upload_desc");
     const [currentPage, setCurrentPage] = useState(1);
     const [importing, setImporting] = useState(false);
@@ -91,43 +107,30 @@ const UploadEnrolledSubject = () => {
     const fileInputRef = useRef(null);
     const pageId = 117;
 
-    const programFilters = useMemo(() => {
-        const map = new Map();
-        studentUploaded.forEach((row) => {
-            if (row.program_id && !map.has(row.program_id)) {
-                map.set(row.program_id, {
-                    program_id: row.program_id,
-                    label: `(${row.program_code}) ${row.program_description}`,
-                });
-            }
-        });
-        return Array.from(map.values());
-    }, [studentUploaded]);
-
-    const yearLevelFilters = useMemo(() => {
-        const map = new Map();
-        studentUploaded.forEach((row) => {
-            if (row.year_level_id && !map.has(row.year_level_id)) {
-                map.set(row.year_level_id, {
-                    year_level_id: row.year_level_id,
-                    year_level_description: row.year_level_description,
-                });
-            }
-        });
-        return Array.from(map.values());
-    }, [studentUploaded]);
-
     const filteredUploadedStudents = useMemo(() => {
         return studentUploaded.filter((row) => {
+            const departmentOk =
+                !selectedDepartmentFilter || String(row.dprtmnt_id) === String(selectedDepartmentFilter);
             const programOk =
-                !selectedProgramFilter || String(row.program_id) === String(selectedProgramFilter);
+                !selectedProgramFilter || String(row.curriculum_id) === String(selectedProgramFilter);
+            const schoolYearOk =
+                !selectedSchoolYearFilter || String(row.year_id) === String(selectedSchoolYearFilter);
+            const semesterOk =
+                !selectedSemesterFilter || String(row.semester_id) === String(selectedSemesterFilter);
             const yearLevelOk =
                 !selectedYearLevelFilter ||
                 String(row.year_level_id) === String(selectedYearLevelFilter);
 
-            return programOk && yearLevelOk;
+            return departmentOk && programOk && schoolYearOk && semesterOk && yearLevelOk;
         });
-    }, [studentUploaded, selectedProgramFilter, selectedYearLevelFilter]);
+    }, [
+        studentUploaded,
+        selectedDepartmentFilter,
+        selectedProgramFilter,
+        selectedSchoolYearFilter,
+        selectedSemesterFilter,
+        selectedYearLevelFilter,
+    ]);
 
     const sortedUploadedStudents = useMemo(() => {
         const sorted = [...filteredUploadedStudents];
@@ -212,8 +215,48 @@ const UploadEnrolledSubject = () => {
     }, []);
 
     useEffect(() => {
+        fetchDepartments();
+        fetchSchoolYears();
+        fetchSemesters();
+        fetchYearLevels();
+        fetchActiveSchoolYear();
+    }, []);
+
+    useEffect(() => {
+        if (departmentFilters.length > 0 && !selectedDepartmentFilter) {
+            const firstDeptId = departmentFilters[0].dprtmnt_id;
+            setSelectedDepartmentFilter(firstDeptId);
+            fetchPrograms(firstDeptId);
+        }
+    }, [departmentFilters, selectedDepartmentFilter]);
+
+    useEffect(() => {
         setCurrentPage(1);
-    }, [selectedProgramFilter, selectedYearLevelFilter, sortOption, studentUploaded.length]);
+    }, [
+        selectedDepartmentFilter,
+        selectedProgramFilter,
+        selectedSchoolYearFilter,
+        selectedSemesterFilter,
+        selectedYearLevelFilter,
+        sortOption,
+        studentUploaded.length,
+    ]);
+
+    useEffect(() => {
+        setSelectedProgramFilter("");
+    }, [selectedDepartmentFilter]);
+
+    useEffect(() => {
+        if (!selectedDepartmentFilter) {
+            setProgramFilters([]);
+            return;
+        }
+        fetchPrograms(selectedDepartmentFilter);
+    }, [selectedDepartmentFilter]);
+
+    useEffect(() => {
+        setSelectedSemesterFilter("");
+    }, [selectedSchoolYearFilter]);
 
     useEffect(() => {
         if (currentPage > totalPages) {
@@ -279,6 +322,65 @@ const UploadEnrolledSubject = () => {
             setStudentUploaded(Array.isArray(res.data) ? res.data : []);
         } catch (err) {
             console.error('Failed in fetching uploaded students:', err);
+        }
+    };
+
+    const fetchDepartments = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/get_department`);
+            setDepartmentFilters(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Failed in fetching departments:", err);
+        }
+    };
+
+    const fetchPrograms = async (departmentId) => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/applied_program/${departmentId}`);
+            setProgramFilters(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Failed in fetching programs:", err);
+            setProgramFilters([]);
+        }
+    };
+
+    const fetchSchoolYears = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/get_school_year/`);
+            setSchoolYearFilters(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Failed in fetching school years:", err);
+        }
+    };
+
+    const fetchSemesters = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/get_school_semester/`);
+            setSemesterFilters(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Failed in fetching semesters:", err);
+        }
+    };
+
+    const fetchYearLevels = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/get_year_level`);
+            setYearLevelFilters(Array.isArray(res.data) ? res.data : []);
+        } catch (err) {
+            console.error("Failed in fetching year levels:", err);
+        }
+    };
+
+    const fetchActiveSchoolYear = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/active_school_year`);
+            if (Array.isArray(res.data) && res.data.length > 0) {
+                const active = res.data[0];
+                if (active?.year_id) setSelectedSchoolYearFilter(active.year_id);
+                if (active?.semester_id) setSelectedSemesterFilter(active.semester_id);
+            }
+        } catch (err) {
+            console.error("Failed in fetching active school year:", err);
         }
     };
 
@@ -442,42 +544,98 @@ const UploadEnrolledSubject = () => {
         </TableContainer>
 
         <Paper sx={{ p: 3, mb: 3, border: `2px solid ${borderColor}` }}>
-            <Grid container spacing={2} justifyContent="flex-end">
-                <Grid item xs={12} sm="auto">
-                    <FormControl size="small" sx={{ width: 160 }}>
-                        <Select
-                            displayEmpty
-                            value={selectedProgramFilter}
-                            onChange={(e) => setSelectedProgramFilter(e.target.value)}
-                        >
-                            <MenuItem value="">All Programs</MenuItem>
-                            {programFilters.map((program) => (
-                                <MenuItem key={program.program_id} value={program.program_id}>
-                                    {program.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm="auto">
-                    <FormControl size="small" sx={{ width: 160 }}>
+            <Box
+                sx={{
+                display: "grid",
+                gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+                gap: 2,
+                }}
+            >
+                <Box sx={{ gridColumn: { xs: "span 1", sm: "span 2" }, display: "flex", justifyContent: "flex-end" }}>
+                    <FormControl size="small" sx={{maxWidth: "250px"}}>
                         <Select
                             displayEmpty
                             value={selectedYearLevelFilter}
                             onChange={(e) => setSelectedYearLevelFilter(e.target.value)}
+                            MenuProps={FILTER_MENU_PROPS}
                         >
-                            <MenuItem value="">All Year Levels</MenuItem>
-                            {yearLevelFilters.map((yl) => (
-                                <MenuItem key={yl.year_level_id} value={yl.year_level_id}>
-                                    {yl.year_level_description}
-                                </MenuItem>
-                            ))}
+                        <MenuItem value="">All Year Levels</MenuItem>
+                        {yearLevelFilters.map((yl) => (
+                            <MenuItem key={yl.year_level_id} value={yl.year_level_id}>
+                            {yl.year_level_description}
+                            </MenuItem>
+                        ))}
                         </Select>
                     </FormControl>
-                </Grid>
-            </Grid>
+                </Box>
+
+                <FormControl size="small" sx={{maxWidth: "400px"}}>
+                    <Select
+                        displayEmpty
+                        value={selectedDepartmentFilter}
+                        onChange={(e) => setSelectedDepartmentFilter(e.target.value)}
+                        MenuProps={FILTER_MENU_PROPS}
+                    >
+                        <MenuItem value="">All Colleges</MenuItem>
+                        {departmentFilters.map((dept) => (
+                            <MenuItem key={dept.dprtmnt_id} value={dept.dprtmnt_id}>
+                                {dept.dprtmnt_name}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{maxWidth: "400px", width: "100%",justifySelf: "end"}}>
+                    <Select
+                        displayEmpty
+                        value={selectedProgramFilter}
+                        onChange={(e) => setSelectedProgramFilter(e.target.value)}
+                        MenuProps={FILTER_MENU_PROPS}
+                    >
+                        <MenuItem value="">All Programs</MenuItem>
+                            {programFilters.map((program) => (
+                                <MenuItem key={program.curriculum_id} value={program.curriculum_id}>
+                                    ({program.program_code}-{program.year_description}){" "}
+                                    {program.program_description} {program.program_major}
+                                </MenuItem>
+                            ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{maxWidth: "400px"}}>
+                    <Select
+                        displayEmpty
+                        value={selectedSchoolYearFilter}
+                        onChange={(e) => setSelectedSchoolYearFilter(e.target.value)}
+                        MenuProps={FILTER_MENU_PROPS}
+                    >
+                        <MenuItem value="">All School Years</MenuItem>
+                        {schoolYearFilters.map((yr) => (
+                            <MenuItem key={yr.year_id} value={yr.year_id}>
+                                {yr.current_year} - {yr.next_year}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+
+                <FormControl size="small" sx={{maxWidth: "400px", justifySelf: "end", width: "100%"}}>
+                    <Select
+                        displayEmpty
+                        value={selectedSemesterFilter}
+                        onChange={(e) => setSelectedSemesterFilter(e.target.value)}
+                        MenuProps={FILTER_MENU_PROPS}
+                    >
+                        <MenuItem value="">All Semesters</MenuItem>
+                        {semesterFilters.map((sem) => (
+                            <MenuItem key={sem.semester_id} value={sem.semester_id}>
+                                {sem.semester_description}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </Box>
         </Paper>
+
 
         <TableContainer
             component={Paper}
