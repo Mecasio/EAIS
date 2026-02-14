@@ -841,4 +841,102 @@ router.post("/import-curriculum-xlsx", upload.single("file"), async (req, res) =
   }
 });
 
+const normalizeCampusComponent = (value) => {
+  const text = normalizeText(value).toUpperCase();
+  if (!text) return null;
+
+  if (text === "0" || text === "MANILA") return 0;
+  if (text === "1" || text === "CAVITE") return 1;
+
+  return null;
+};
+
+router.post("/import-program-xlsx", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: "No file uploaded" });
+    }
+
+    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    if (!rows.length) {
+      return res.status(400).json({ success: false, error: "Excel file is empty" });
+    }
+
+    const connection = await db3.getConnection();
+    let importedCount = 0;
+    const skippedItems = [];
+
+    try {
+      await connection.beginTransaction();
+
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+
+        const programCode = normalizeText(
+          pickValue(row, ["Program Code", "program_code", "Code", "programCode"]),
+        );
+        const programDescription = normalizeText(
+          pickValue(row, ["Program Description", "program_description", "Description"]),
+        );
+        const majorValue = normalizeText(pickValue(row, ["Major", "major"]));
+        const major = majorValue || null;
+        const rawComponent = pickValue(row, ["Campus", "components", "component", "Components"]);
+        const component = normalizeCampusComponent(rawComponent);
+
+        if (!programCode || !programDescription || component === null) {
+          skippedItems.push({
+            row: index + 2,
+            reason: "Missing/invalid program_code, program_description, or campus",
+          });
+          continue;
+        }
+
+        const [existingRows] = await connection.query(
+          `SELECT program_id
+           FROM program_table
+           WHERE UPPER(TRIM(program_code)) = UPPER(TRIM(?))
+           LIMIT 1`,
+          [programCode],
+        );
+
+        if (existingRows.length) {
+          skippedItems.push({
+            row: index + 2,
+            reason: "Program code already exists",
+          });
+          continue;
+        }
+
+        await connection.query(
+          `INSERT INTO program_table (program_code, program_description, major, components)
+           VALUES (?, ?, ?, ?)`,
+          [programCode, programDescription, major, component],
+        );
+        importedCount += 1;
+      }
+
+      await connection.commit();
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
+
+    return res.json({
+      success: true,
+      message: "Program import finished",
+      importedCount,
+      skippedCount: skippedItems.length,
+      skippedItems: skippedItems.slice(0, 100),
+    });
+  } catch (err) {
+    console.error("Program import error:", err);
+    return res.status(500).json({ success: false, error: "Failed to import program file" });
+  }
+});
+
 module.exports = router;

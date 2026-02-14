@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { SettingsContext } from "../App";
 import axios from "axios";
 import {
@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
@@ -28,6 +29,7 @@ import {
   Paper,
   FormControl, Select, MenuItem
 } from "@mui/material";
+import LinearProgress from "@mui/material/LinearProgress";
 
 const ProgramPanel = () => {
   const settings = useContext(SettingsContext);
@@ -134,6 +136,11 @@ const ProgramPanel = () => {
     message: "",
     severity: "success",
   });
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importProgress, setImportProgress] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   const fetchPrograms = async () => {
     try {
@@ -253,6 +260,80 @@ const ProgramPanel = () => {
 
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleOpenImportDialog = () => {
+    setImportDialogOpen(true);
+    setImportFile(null);
+    setImportProgress(0);
+    setIsImporting(false);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
+  const handleCloseImportDialog = () => {
+    if (isImporting) return;
+    setImportDialogOpen(false);
+    setImportFile(null);
+    setImportProgress(0);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
+  const handleImportPrograms = async () => {
+    if (!importFile) {
+      setSnackbar({
+        open: true,
+        message: "Please select an Excel file first.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      setImportProgress(0);
+
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const res = await axios.post(`${API_BASE_URL}/import-program-xlsx`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (!event.total) return;
+          const percent = Math.round((event.loaded * 100) / event.total);
+          setImportProgress(percent);
+        },
+      });
+
+      setImportProgress(100);
+      await fetchPrograms();
+
+      const importedCount = Number(res.data?.importedCount || 0);
+      const skippedCount = Number(res.data?.skippedCount || 0);
+      setSnackbar({
+        open: true,
+        message: `Program import done. Imported: ${importedCount}, Skipped: ${skippedCount}`,
+        severity: skippedCount > 0 ? "warning" : "success",
+      });
+
+      setImportDialogOpen(false);
+      setImportFile(null);
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Program import failed:", err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || err.response?.data?.message || "Failed to import programs.",
+        severity: "error",
+      });
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   // ✅ Move security event listeners inside useEffect
@@ -415,26 +496,37 @@ const ProgramPanel = () => {
         >
           PROGRAM PANEL
         </Typography>
-        <TextField
-          variant="outlined"
-          placeholder="Search Program Description / Code / Major"
-          size="small"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-          }}
-          sx={{
-            width: 450,
-            backgroundColor: "#fff",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "10px",
-            },
-          }}
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
-          }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap" }}>
+          <TextField
+            variant="outlined"
+            placeholder="Search Program Description / Code / Major"
+            size="small"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
+            sx={{
+              width: 450,
+              backgroundColor: "#fff",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+              },
+            }}
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
+            }}
+          />
+
+          <Button
+            variant="contained"
+            startIcon={<UploadFileIcon />}
+            onClick={handleOpenImportDialog}
+            sx={{ backgroundColor: mainButtonColor, color: "#fff", minWidth: 150 }}
+          >
+            Import
+          </Button>
+        </Box>
 
       </Box>
 
@@ -801,6 +893,44 @@ const ProgramPanel = () => {
             }}
           >
             Yes, Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={importDialogOpen} onClose={handleCloseImportDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Import Programs</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Upload .xlsx/.xls with Program Code, Program Description, Major, Campus.
+              Campus values supported: Manila = 0, Cavite = 1.
+            </Typography>
+
+            <TextField
+              inputRef={importInputRef}
+              type="file"
+              size="small"
+              inputProps={{ accept: ".xlsx,.xls" }}
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              fullWidth
+            />
+
+            {isImporting && (
+              <Box>
+                <LinearProgress variant="determinate" value={importProgress} sx={{ height: 10, borderRadius: 2 }} />
+                <Typography variant="caption" sx={{ mt: 1, display: "block" }}>
+                  {importProgress}%
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseImportDialog} disabled={isImporting}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleImportPrograms} disabled={!importFile || isImporting}>
+            {isImporting ? "Importing..." : "Import"}
           </Button>
         </DialogActions>
       </Dialog>
