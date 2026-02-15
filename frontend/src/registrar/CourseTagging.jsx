@@ -1351,8 +1351,6 @@ const CourseTagging = () => {
                 >
                   Description
                 </TableCell>
-
-
                 <TableCell
                   style={{
                     border: `2px solid ${borderColor}`,
@@ -1609,6 +1607,14 @@ const CourseTagging = () => {
                 >
                   SUBJECT CODE
                 </TableCell>
+                <TableCell 
+                  style={{
+                    border: `2px solid ${borderColor}`,
+                    textAlign: "center",
+                  }}
+                >
+                  NSTP Component 
+                </TableCell>
                 <TableCell
                   style={{
                     textAlign: "center",
@@ -1711,7 +1717,6 @@ const CourseTagging = () => {
                   >
                     {e.course_id}
                   </TableCell>
-
                   <TableCell
                     style={{
                       textAlign: "center",
@@ -1719,6 +1724,14 @@ const CourseTagging = () => {
                     }}
                   >
                     {e.course_code}
+                  </TableCell>
+                  <TableCell
+                    style={{
+                      textAlign: "center",
+                      border: `2px solid ${borderColor}`,
+                    }}
+                  >
+                    
                   </TableCell>
                   <TableCell
                     style={{

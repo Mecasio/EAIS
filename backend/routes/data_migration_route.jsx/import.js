@@ -591,8 +591,8 @@ router.post("/import-xlsx-into-enrolled-subject", upload.single("file"), async (
         }
 
         await connection.query(
-          `INSERT IGNORE INTO person_status_table (person_id, student_registration_status)
-           VALUES (?, 1)`,
+          `INSERT INTO person_status_table (person_id, student_registration_status)
+           VALUES (?, 1) ON DUPLICATE KEY UPDATE student_registration_status = student_registration_status`,
           [personId],
         );
 

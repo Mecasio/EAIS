@@ -57,15 +57,14 @@ const UploadEnrolledSubject = () => {
     const [subtitleColor, setSubtitleColor] = useState("#555555");
     const [borderColor, setBorderColor] = useState("#000000");
     const [mainButtonColor, setMainButtonColor] = useState("#1976d2");
-    const [subButtonColor, setSubButtonColor] = useState("#ffffff"); // ✅ NEW
-    const [stepperColor, setStepperColor] = useState("#000000"); // ✅ NEW
+    const [subButtonColor, setSubButtonColor] = useState("#ffffff");
+    const [stepperColor, setStepperColor] = useState("#000000");
   
     const [fetchedLogo, setFetchedLogo] = useState(null);
     const [companyName, setCompanyName] = useState("");
     const [shortTerm, setShortTerm] = useState("");
     const [campusAddress, setCampusAddress] = useState("");
   
-    // 🔹 Authentication and access states
     const [userID, setUserID] = useState("");
     const [user, setUser] = useState("");
     const [userRole, setUserRole] = useState("");
@@ -149,7 +148,7 @@ const UploadEnrolledSubject = () => {
         } else {
             sorted.sort(
                 (a, b) =>
-                    new Date(b.uploaded_at || 0).getTime() - new Date(a.uploaded_at || 0).getTime(),
+                    new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
             );
         }
         return sorted;
@@ -215,11 +214,15 @@ const UploadEnrolledSubject = () => {
     }, []);
 
     useEffect(() => {
-        fetchDepartments();
-        fetchSchoolYears();
-        fetchSemesters();
-        fetchYearLevels();
-        fetchActiveSchoolYear();
+        const loadFilters = async () => {
+            await fetchDepartments();
+            await fetchSchoolYears();
+            await fetchSemesters();
+            await fetchYearLevels();
+            await fetchActiveSchoolYear();
+        };
+
+        loadFilters();
     }, []);
 
     useEffect(() => {
@@ -944,7 +947,10 @@ const UploadEnrolledSubject = () => {
                 <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>Middle Name</TableCell>
                 <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>Program</TableCell>
                 <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>Program Code</TableCell>
+                <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>Semester</TableCell>
+                <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>Course Code</TableCell>
                 <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 , textAlign: "center"}}>Year Level</TableCell>
+                <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>Uploaded At</TableCell>
                 </TableRow>
             </TableHead>
             <TableBody>
@@ -959,13 +965,18 @@ const UploadEnrolledSubject = () => {
                     <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>{row.middle_name}</TableCell>
                     <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>{row.program_description}</TableCell>
                     <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>{row.program_code}</TableCell>
+                    <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>{row.semester_description || "-"}</TableCell>
+                    <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>{row.course_code || "-"}</TableCell>
                     <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 , textAlign: "center"}}>{row.year_level_description}</TableCell>
+                    <TableCell sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1 }}>
+                        {row.created_at ? new Date(row.created_at).toLocaleString() : "-"}
+                    </TableCell>
                 </TableRow>
                 ))}
                 {filteredUploadedStudents.length === 0 && (
                 <TableRow>
                     <TableCell
-                        colSpan={8}
+                        colSpan={11}
                         align="center"
                         sx={{ borderColor: borderColor, borderStyle: "solid", borderWidth: 1, height: "120px" }}
                     >
