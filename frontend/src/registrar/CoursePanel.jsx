@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { SettingsContext } from "../App";
 import axios from "axios";
 import {
@@ -35,6 +35,8 @@ import Unauthorized from "../components/Unauthorized";
 import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
 import SearchIcon from "@mui/icons-material/Search";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import LinearProgress from "@mui/material/LinearProgress";
 
 const CoursePanel = () => {
   const settings = useContext(SettingsContext);
@@ -91,6 +93,11 @@ const CoursePanel = () => {
     severity: "info",
     key: 0,
   });
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importProgress, setImportProgress] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   const showSnack = (message, severity) => {
     setSnack({
@@ -194,11 +201,6 @@ const CoursePanel = () => {
     }
   };
 
-
-
-
-
-
   const fetchCourses = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/course_list`);
@@ -212,7 +214,6 @@ const CoursePanel = () => {
     }
   };
 
-
   useEffect(() => {
     fetchCourses();
   }, []);
@@ -224,7 +225,6 @@ const CoursePanel = () => {
       [name]: value,
     }));
   };
-
 
   const handleAddingCourse = async () => {
     try {
@@ -269,7 +269,6 @@ const CoursePanel = () => {
       .includes(searchQuery.toLowerCase())
   );
 
-
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 100; // same behavior
 
@@ -285,9 +284,6 @@ const CoursePanel = () => {
     indexOfFirstItem,
     indexOfLastItem
   );
-
-
-
 
   useEffect(() => {
     setCurrentPage(1);
@@ -307,7 +303,6 @@ const CoursePanel = () => {
     setEditMode(true);
     setEditId(item.course_id);
   };
-
 
   const handleUpdateCourse = async () => {
     if (!editId) {
@@ -343,7 +338,6 @@ const CoursePanel = () => {
       showSnack(error.response?.data?.message || "Failed to update course.", "error");
     }
   };
-
   
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
@@ -363,13 +357,77 @@ const CoursePanel = () => {
     }
   };
 
-
-
-
-
   const handleClose = (_, reason) => {
     if (reason === "clickaway") return;
     setSnack((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleOpenImportDialog = () => {
+    setImportDialogOpen(true);
+    setImportFile(null);
+    setImportProgress(0);
+    setIsImporting(false);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
+  const handleCloseImportDialog = () => {
+    if (isImporting) return;
+    setImportDialogOpen(false);
+    setImportFile(null);
+    setImportProgress(0);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
+  const handleImportCourses = async () => {
+    if (!importFile) {
+      showSnack("Please select an Excel file first.", "warning");
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      setImportProgress(0);
+
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const res = await axios.post(`${API_BASE_URL}/import-course-xlsx`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (!event.total) return;
+          const percent = Math.round((event.loaded * 100) / event.total);
+          setImportProgress(percent);
+        },
+      });
+
+      setImportProgress(100);
+      await fetchCourses();
+
+      const importedCount = Number(res.data?.importedCount || 0);
+      const skippedCount = Number(res.data?.skippedCount || 0);
+      showSnack(
+        `Course import done. Imported: ${importedCount}, Skipped: ${skippedCount}`,
+        skippedCount > 0 ? "warning" : "success",
+      );
+
+      setImportDialogOpen(false);
+      setImportFile(null);
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Course import failed:", err);
+      showSnack(
+        err.response?.data?.error || err.response?.data?.message || "Failed to import courses.",
+        "error",
+      );
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const attachedFees = feeRules.filter(
@@ -445,28 +503,38 @@ const CoursePanel = () => {
         >
           COURSE PANEL
         </Typography>
-
-        <TextField
-          variant="outlined"
-          placeholder="Search Year / Program Code / Description / Major"
-          size="small"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          sx={{
-            width: 450,
-            backgroundColor: "#fff",
-            borderRadius: 1,
-            mb: 2,
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "10px",
-            },
-          }}
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
-          }}
-        />
+        <Box sx={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap" }}>
+          <TextField
+            variant="outlined"
+            placeholder="Search Course Code / Description"
+            size="small"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
+            sx={{
+              width: 460,
+              backgroundColor: "#fff",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+              },
+            }}
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
+            }}
+          />
+        
+          <Button
+            variant="contained"
+            startIcon={<UploadFileIcon />}
+            onClick={handleOpenImportDialog}
+            sx={{ backgroundColor: mainButtonColor, color: "#fff", minWidth: 150 }}
+          >
+            Import
+          </Button>
+        </Box>
       </Box>
-
       <hr style={{ border: "1px solid #ccc", width: "100%" }} />
       <br />
       <TableContainer component={Paper} sx={{ width: "100%", border: `2px solid ${borderColor}` }}>
@@ -940,6 +1008,43 @@ const CoursePanel = () => {
 
 
         {/* ✅ Snackbar */}
+        <Dialog open={importDialogOpen} onClose={handleCloseImportDialog} maxWidth="sm" fullWidth>
+          <DialogTitle>Import Courses</DialogTitle>
+          <DialogContent dividers>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                Upload .xlsx/.xls with columns like: course_code, course_description, course_unit, lec_unit, lab_unit, prereq, corequisite.
+              </Typography>
+
+              <TextField
+                inputRef={importInputRef}
+                type="file"
+                size="small"
+                inputProps={{ accept: ".xlsx,.xls" }}
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                fullWidth
+              />
+
+              {isImporting && (
+                <Box>
+                  <LinearProgress variant="determinate" value={importProgress} sx={{ height: 10, borderRadius: 2 }} />
+                  <Typography variant="caption" sx={{ mt: 1, display: "block" }}>
+                    {importProgress}%
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseImportDialog} disabled={isImporting}>
+              Cancel
+            </Button>
+            <Button variant="contained" onClick={handleImportCourses} disabled={!importFile || isImporting}>
+              {isImporting ? "Importing..." : "Import"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
         <Snackbar
           key={snack.key}
           open={snack.open}

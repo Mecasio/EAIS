@@ -16,8 +16,10 @@ import LoadingOverlay from "../components/LoadingOverlay";
 import API_BASE_URL from "../apiConfig";
 import { TextField, InputAdornment } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import ProgramTaggingFilter from "../registrar/ProgramTaggingFilter";
 import { Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import LinearProgress from "@mui/material/LinearProgress";
 
 
 const ProgramTagging = () => {
@@ -75,6 +77,11 @@ const ProgramTagging = () => {
     message: "",
     severity: "success",
   });
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importProgress, setImportProgress] = useState(0);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef(null);
 
   const pageId = 35;
 
@@ -535,6 +542,80 @@ const ProgramTagging = () => {
     return `${startYear} - ${startYear + 1}`;
   };
 
+  const handleOpenImportDialog = () => {
+    setImportDialogOpen(true);
+    setImportFile(null);
+    setImportProgress(0);
+    setIsImporting(false);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
+  const handleCloseImportDialog = () => {
+    if (isImporting) return;
+    setImportDialogOpen(false);
+    setImportFile(null);
+    setImportProgress(0);
+    if (importInputRef.current) {
+      importInputRef.current.value = "";
+    }
+  };
+
+  const handleImportProgramTagging = async () => {
+    if (!importFile) {
+      setSnackbar({
+        open: true,
+        message: "Please select an Excel file first.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      setImportProgress(0);
+
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const res = await axios.post(`${API_BASE_URL}/import-program-tagging-xlsx`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (!event.total) return;
+          const percent = Math.round((event.loaded * 100) / event.total);
+          setImportProgress(percent);
+        },
+      });
+
+      setImportProgress(100);
+      await fetchTaggedPrograms();
+
+      const importedCount = Number(res.data?.importedCount || 0);
+      const skippedCount = Number(res.data?.skippedCount || 0);
+      setSnackbar({
+        open: true,
+        message: `Program tagging import done. Imported: ${importedCount}, Skipped: ${skippedCount}`,
+        severity: skippedCount > 0 ? "warning" : "success",
+      });
+
+      setImportDialogOpen(false);
+      setImportFile(null);
+      if (importInputRef.current) {
+        importInputRef.current.value = "";
+      }
+    } catch (err) {
+      console.error("Program tagging import failed:", err);
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || err.response?.data?.message || "Failed to import program tagging data.",
+        severity: "error",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   if (loading || hasAccess === null) {
     return <LoadingOverlay open={loading} message="Loading..." />;
   }
@@ -560,27 +641,37 @@ const ProgramTagging = () => {
           PROGRAM AND COURSE MANAGEMENT
         </Typography>
 
-        <TextField
-          variant="outlined"
-          placeholder="Search Curriculum / Course / Year / Semester"
-          size="small"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-          }}
-          sx={{
-            width: 450,
-            backgroundColor: "#fff",
-            borderRadius: 1,
-            "& .MuiOutlinedInput-root": {
-              borderRadius: "10px",
-            },
-          }}
-          InputProps={{
-            startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
-          }}
-        />
-
+        <Box sx={{ display: "flex", alignItems: "center", gap: "2rem", flexWrap: "wrap" }}>
+          <TextField
+            variant="outlined"
+            placeholder="Search Curriculum / Course / Year / Semester"
+            size="small"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+            }}
+            sx={{
+              width: 460,
+              backgroundColor: "#fff",
+              borderRadius: 1,
+              "& .MuiOutlinedInput-root": {
+                borderRadius: "10px",
+              },
+            }}
+            InputProps={{
+              startAdornment: <SearchIcon sx={{ mr: 1, color: "gray" }} />,
+            }}
+          />
+        
+          <Button
+            variant="contained"
+            startIcon={<UploadFileIcon />}
+            onClick={handleOpenImportDialog}
+            sx={{ backgroundColor: mainButtonColor, color: "#fff", minWidth: 150 }}
+          >
+            Import
+          </Button>
+        </Box>
 
       </Box>
 
@@ -1302,6 +1393,44 @@ const ProgramTagging = () => {
             }}
           >
             Yes, Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={importDialogOpen} onClose={handleCloseImportDialog} maxWidth="sm" fullWidth>
+        <DialogTitle>Import Program Tagging</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Upload .xlsx/.xls with columns like: curriculum_id, year_level_id, semester_id, course_id, lec_fee, lab_fee.
+              You can also use program_code + year_description and course_code for ID resolution.
+            </Typography>
+
+            <TextField
+              inputRef={importInputRef}
+              type="file"
+              size="small"
+              inputProps={{ accept: ".xlsx,.xls" }}
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              fullWidth
+            />
+
+            {isImporting && (
+              <Box>
+                <LinearProgress variant="determinate" value={importProgress} sx={{ height: 10, borderRadius: 2 }} />
+                <Typography variant="caption" sx={{ mt: 1, display: "block" }}>
+                  {importProgress}%
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseImportDialog} disabled={isImporting}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleImportProgramTagging} disabled={!importFile || isImporting}>
+            {isImporting ? "Importing..." : "Import"}
           </Button>
         </DialogActions>
       </Dialog>

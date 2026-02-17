@@ -86,6 +86,70 @@ const mapRemarkToNumeric = (remark) => {
   return 0;
 };
 
+const normalizeAcademicYearValue = (yearText) => {
+  const text = normalizeText(yearText);
+  if (!text) return "";
+
+  const rangeMatch = text.match(/^(\d{4})\s*-\s*(\d{4})$/);
+  if (rangeMatch) return rangeMatch[1];
+
+  const yearMatch = text.match(/^(\d{4})$/);
+  if (yearMatch) return yearMatch[1];
+
+  return text;
+};
+
+const normalizeCampusComponent = (value) => {
+  const text = normalizeText(value).toUpperCase();
+  if (!text) return null;
+
+  if (text === "0" || text === "MANILA") return 0;
+  if (text === "1" || text === "CAVITE") return 1;
+
+  return null;
+};
+
+const getUploadedRows = (req, res) => {
+  if (!req.file) {
+    res.status(400).json({ success: false, error: "No file uploaded" });
+    return null;
+  }
+
+  const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+  if (!rows.length) {
+    res.status(400).json({ success: false, error: "Excel file is empty" });
+    return null;
+  }
+
+  return rows;
+};
+
+const runInTransaction = async (work) => {
+  const connection = await db3.getConnection();
+  try {
+    await connection.beginTransaction();
+    const result = await work(connection);
+    await connection.commit();
+    return result;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+};
+
+const buildImportResponse = (message, importedCount, skippedItems) => ({
+  success: true,
+  message,
+  importedCount,
+  skippedCount: skippedItems.length,
+  skippedItems: skippedItems.slice(0, 100),
+});
+
 // -------------------------------------------- FOR FILE UPLOAD IN ENROLLED SUBJECT --------------------------------- //
 router.post("/import-xlsx-into-enrolled-subject", upload.single("file"), async (req, res) => {
   const campus = normalizeText(req.body.campus) || null;
@@ -693,46 +757,18 @@ router.post("/import-xlsx-into-enrolled-subject", upload.single("file"), async (
   }
 });
 
-const normalizeAcademicYearValue = (yearText) => {
-  const text = normalizeText(yearText);
-  if (!text) return "";
-
-  const rangeMatch = text.match(/^(\d{4})\s*-\s*(\d{4})$/);
-  if (rangeMatch) return rangeMatch[1];
-
-  const yearMatch = text.match(/^(\d{4})$/);
-  if (yearMatch) return yearMatch[1];
-
-  return text;
-};
-
 router.post("/import-curriculum-xlsx", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: "No file uploaded" });
-    }
+    const rows = getUploadedRows(req, res);
+    if (!rows) return;
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-    if (!rows.length) {
-      return res.status(400).json({ success: false, error: "Excel file is empty" });
-    }
-
-    const connection = await db3.getConnection();
     let importedCount = 0;
     const skippedItems = [];
 
-    try {
-      await connection.beginTransaction();
-
+    await runInTransaction(async (connection) => {
       for (let index = 0; index < rows.length; index += 1) {
         const row = rows[index];
 
-        const rawProgramId = toNullableNumber(
-          pickValue(row, ["program_id", "Program ID", "ProgramId"]),
-        );
         const programCode = normalizeText(
           pickValue(row, ["Program Code", "program_code", "Program", "Code"]),
         );
@@ -741,42 +777,39 @@ router.post("/import-curriculum-xlsx", upload.single("file"), async (req, res) =
         );
         const major = normalizeText(pickValue(row, ["Major", "major"]));
 
-        const rawYearId = toNullableNumber(pickValue(row, ["year_id", "Year ID", "YearId"]));
         const yearRawValue = pickValue(row, ["Year", "year", "Academic Year", "year_description"]);
         const normalizedYearDescription = normalizeAcademicYearValue(yearRawValue);
 
-        let programId = rawProgramId;
-        if (!programId) {
-          if (programCode) {
-            const [programRows] = await connection.query(
-              `SELECT program_id
-               FROM program_table
-               WHERE UPPER(TRIM(program_code)) = UPPER(TRIM(?))
-               LIMIT 1`,
-              [programCode],
-            );
-            if (programRows.length) {
-              programId = programRows[0].program_id;
-            }
-          }
-
-          if (!programId && programDescription) {
-            const [programRows] = await connection.query(
-              `SELECT program_id
-               FROM program_table
-               WHERE UPPER(TRIM(program_description)) = UPPER(TRIM(?))
-                 AND UPPER(TRIM(COALESCE(major, ''))) = UPPER(TRIM(?))
-               LIMIT 1`,
-              [programDescription, major],
-            );
-            if (programRows.length) {
-              programId = programRows[0].program_id;
-            }
+        let programId = null;
+        if (programCode) {
+          const [programRows] = await connection.query(
+            `SELECT program_id
+             FROM program_table
+             WHERE UPPER(TRIM(program_code)) = UPPER(TRIM(?))
+             LIMIT 1`,
+            [programCode],
+          );
+          if (programRows.length) {
+            programId = programRows[0].program_id;
           }
         }
 
-        let yearId = rawYearId;
-        if (!yearId && normalizedYearDescription) {
+        if (!programId && programDescription) {
+          const [programRows] = await connection.query(
+            `SELECT program_id
+             FROM program_table
+             WHERE UPPER(TRIM(program_description)) = UPPER(TRIM(?))
+               AND UPPER(TRIM(COALESCE(major, ''))) = UPPER(TRIM(?))
+             LIMIT 1`,
+            [programDescription, major],
+          );
+          if (programRows.length) {
+            programId = programRows[0].program_id;
+          }
+        }
+
+        let yearId = null;
+        if (normalizedYearDescription) {
           const [yearRows] = await connection.query(
             `SELECT year_id
              FROM year_table
@@ -789,10 +822,18 @@ router.post("/import-curriculum-xlsx", upload.single("file"), async (req, res) =
           }
         }
 
-        if (!programId || !yearId) {
+        if (!programId) {
           skippedItems.push({
             row: index + 2,
-            reason: "Program or year could not be resolved",
+            reason: `There's no matching Program found: ${programCode || programDescription || "N/A"}`,
+          });
+          continue;
+        }
+
+        if (!yearId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Year found: ${normalizedYearDescription || yearRawValue || "N/A"}`,
           });
           continue;
         }
@@ -819,59 +860,24 @@ router.post("/import-curriculum-xlsx", upload.single("file"), async (req, res) =
         );
         importedCount += 1;
       }
-
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
-
-    return res.json({
-      success: true,
-      message: "Curriculum import finished",
-      importedCount,
-      skippedCount: skippedItems.length,
-      skippedItems: skippedItems.slice(0, 100),
     });
+
+    return res.json(buildImportResponse("Curriculum import finished", importedCount, skippedItems));
   } catch (err) {
     console.error("Curriculum import error:", err);
     return res.status(500).json({ success: false, error: "Failed to import curriculum file" });
   }
 });
 
-const normalizeCampusComponent = (value) => {
-  const text = normalizeText(value).toUpperCase();
-  if (!text) return null;
-
-  if (text === "0" || text === "MANILA") return 0;
-  if (text === "1" || text === "CAVITE") return 1;
-
-  return null;
-};
-
 router.post("/import-program-xlsx", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: "No file uploaded" });
-    }
+    const rows = getUploadedRows(req, res);
+    if (!rows) return;
 
-    const workbook = XLSX.read(req.file.buffer, { type: "buffer" });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-    if (!rows.length) {
-      return res.status(400).json({ success: false, error: "Excel file is empty" });
-    }
-
-    const connection = await db3.getConnection();
     let importedCount = 0;
     const skippedItems = [];
 
-    try {
-      await connection.beginTransaction();
-
+    await runInTransaction(async (connection) => {
       for (let index = 0; index < rows.length; index += 1) {
         const row = rows[index];
 
@@ -917,25 +923,326 @@ router.post("/import-program-xlsx", upload.single("file"), async (req, res) => {
         );
         importedCount += 1;
       }
-
-      await connection.commit();
-    } catch (error) {
-      await connection.rollback();
-      throw error;
-    } finally {
-      connection.release();
-    }
-
-    return res.json({
-      success: true,
-      message: "Program import finished",
-      importedCount,
-      skippedCount: skippedItems.length,
-      skippedItems: skippedItems.slice(0, 100),
     });
+
+    return res.json(buildImportResponse("Program import finished", importedCount, skippedItems));
   } catch (err) {
     console.error("Program import error:", err);
     return res.status(500).json({ success: false, error: "Failed to import program file" });
+  }
+});
+
+router.post("/import-course-xlsx", upload.single("file"), async (req, res) => {
+  try {
+    const rows = getUploadedRows(req, res);
+    if (!rows) return;
+
+    let importedCount = 0;
+    const skippedItems = [];
+
+    await runInTransaction(async (connection) => {
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+
+        const courseCode = normalizeText(
+          pickValue(row, ["course_code", "Course Code", "Course", "Code"]),
+        );
+        const courseDescription = normalizeText(
+          pickValue(row, ["course_description", "Course Description", "Description"]),
+        );
+        const courseUnit = toNullableNumber(
+          pickValue(row, ["course_unit", "Course Unit", "Credit Unit", "Units"]),
+        );
+        const lecUnit = toNullableNumber(
+          pickValue(row, ["lec_unit", "Lecture Unit", "Lec Unit", "Lec"]),
+        );
+        const labUnit = toNullableNumber(
+          pickValue(row, ["lab_unit", "Laboratory Unit", "Lab Unit", "Lab"]),
+        );
+        const prereqValue = normalizeText(
+          pickValue(row, ["prereq", "Prerequisite", "Pre-requisite"]),
+        );
+        const corequisiteValue = normalizeText(
+          pickValue(row, ["corequisite", "Corequisite", "Co-requisite"]),
+        );
+
+        if (!courseCode) {
+          skippedItems.push({
+            row: index + 2,
+            reason: "Missing course_code",
+          });
+          continue;
+        }
+
+        const [existingRows] = await connection.query(
+          `SELECT course_id
+           FROM course_table
+           WHERE UPPER(TRIM(course_code)) = UPPER(TRIM(?))
+           LIMIT 1`,
+          [courseCode],
+        );
+
+        if (existingRows.length) {
+          skippedItems.push({
+            row: index + 2,
+            reason: "Course code already exists",
+          });
+          continue;
+        }
+
+        await connection.query(
+          `INSERT INTO course_table
+            (course_code, course_description, course_unit, lec_unit, lab_unit, prereq, corequisite)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            courseCode,
+            courseDescription || null,
+            courseUnit ?? 0,
+            lecUnit ?? 0,
+            labUnit ?? 0,
+            prereqValue || null,
+            corequisiteValue || null,
+          ],
+        );
+        importedCount += 1;
+      }
+    });
+
+    return res.json(buildImportResponse("Course import finished", importedCount, skippedItems));
+  } catch (err) {
+    console.error("Course import error:", err);
+    return res.status(500).json({ success: false, error: "Failed to import course file" });
+  }
+});
+
+router.post("/import-program-tagging-xlsx", upload.single("file"), async (req, res) => {
+  try {
+    const rows = getUploadedRows(req, res);
+    if (!rows) return;
+
+    let importedCount = 0;
+    const skippedItems = [];
+
+    await runInTransaction(async (connection) => {
+      for (let index = 0; index < rows.length; index += 1) {
+        const row = rows[index];
+
+        // 1) Extract metadata first.
+        const programCode = normalizeText(
+          pickValue(row, ["Program Code", "program_code", "Program", "Code"]),
+        );
+        const campusRaw = pickValue(row, ["Campus", "campus", "Components", "components"]);
+        const campusComponent = normalizeCampusComponent(campusRaw);
+        const yearRaw = pickValue(row, ["Year", "year", "Academic Year", "year_description"]);
+        const normalizedYearDescription = normalizeAcademicYearValue(yearRaw); // 2018-2019 -> 2018
+        const yearLevelDescription = normalizeText(
+          pickValue(row, ["Year Level", "year_level_description", "Year Level Description"]),
+        );
+        const semesterDescription = normalizeText(
+          pickValue(row, ["Semester", "semester_description", "Semester Description"]),
+        );
+        const courseCode = normalizeText(
+          pickValue(row, ["Course Code", "course_code", "Course"]),
+        );
+        const courseDescription = normalizeText(
+          pickValue(row, ["Course Description", "course_description", "Description"]),
+        );
+
+        // 2) Resolve IDs using metadata.
+        let yearId = null;
+        if (normalizedYearDescription) {
+          const [yearRows] = await connection.query(
+            `SELECT year_id
+               FROM year_table
+              WHERE TRIM(year_description) = TRIM(?)
+              LIMIT 1`,
+            [normalizedYearDescription],
+          );
+          if (yearRows.length) {
+            yearId = yearRows[0].year_id;
+          }
+        }
+        if (!yearId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Year found: ${normalizedYearDescription || yearRaw || "N/A"}`,
+          });
+          continue;
+        }
+
+        let programId = null;
+        if (programCode) {
+          if (campusComponent !== null) {
+            const [programRows] = await connection.query(
+              `SELECT program_id
+                 FROM program_table
+                WHERE UPPER(TRIM(program_code)) = UPPER(TRIM(?))
+                  AND components = ?
+                LIMIT 1`,
+              [programCode, campusComponent],
+            );
+            if (programRows.length) {
+              programId = programRows[0].program_id;
+            }
+          }
+
+          if (!programId) {
+            const [programRows] = await connection.query(
+              `SELECT program_id
+                 FROM program_table
+                WHERE UPPER(TRIM(program_code)) = UPPER(TRIM(?))
+                LIMIT 1`,
+              [programCode],
+            );
+            if (programRows.length) {
+              programId = programRows[0].program_id;
+            }
+          }
+        }
+        
+        if (!programId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Program found: ${programCode || "N/A"}`,
+          });
+          continue;
+        }
+
+        let curriculumId = null;
+        if (yearId && programId) {
+          const [curriculumRows] = await connection.query(
+            `SELECT curriculum_id
+               FROM curriculum_table
+              WHERE year_id = ?
+                AND program_id = ?
+              LIMIT 1`,
+            [yearId, programId],
+          );
+          if (curriculumRows.length) {
+            curriculumId = curriculumRows[0].curriculum_id;
+          }
+        }
+        if (!curriculumId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Curriculum found for Program ${programCode || programId} and Year ${normalizedYearDescription || yearId}`,
+          });
+          continue;
+        }
+
+        let yearLevelId = null;
+        if (yearLevelDescription) {
+          const [yearLevelRows] = await connection.query(
+            `SELECT year_level_id
+               FROM year_level_table
+              WHERE UPPER(TRIM(year_level_description)) = UPPER(TRIM(?))
+              LIMIT 1`,
+            [yearLevelDescription],
+          );
+          if (yearLevelRows.length) {
+            yearLevelId = yearLevelRows[0].year_level_id;
+          }
+        }
+        if (!yearLevelId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Year Level found: ${yearLevelDescription || "N/A"}`,
+          });
+          continue;
+        }
+
+        let semesterId = null;
+        if (semesterDescription) {
+          const [semesterRows] = await connection.query(
+            `SELECT semester_id
+               FROM semester_table
+              WHERE UPPER(TRIM(semester_description)) = UPPER(TRIM(?))
+              LIMIT 1`,
+            [semesterDescription],
+          );
+          if (semesterRows.length) {
+            semesterId = semesterRows[0].semester_id;
+          }
+        }
+        if (!semesterId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Semester found: ${semesterDescription || "N/A"}`,
+          });
+          continue;
+        }
+
+        let courseId = null;
+        if (courseCode) {
+          const [courseRows] = await connection.query(
+            `SELECT course_id
+               FROM course_table
+              WHERE UPPER(TRIM(course_code)) = UPPER(TRIM(?))
+              LIMIT 1`,
+            [courseCode],
+          );
+          if (courseRows.length) {
+            courseId = courseRows[0].course_id;
+          }
+        }
+        if (!courseId && courseDescription) {
+          const [courseRows] = await connection.query(
+            `SELECT course_id
+               FROM course_table
+              WHERE UPPER(TRIM(course_description)) = UPPER(TRIM(?))
+              LIMIT 1`,
+            [courseDescription],
+          );
+          if (courseRows.length) {
+            courseId = courseRows[0].course_id;
+          }
+        }
+        if (!courseId) {
+          skippedItems.push({
+            row: index + 2,
+            reason: `There's no matching Course found: ${courseCode || courseDescription || "N/A"}`,
+          });
+          continue;
+        }
+
+        const [existingRows] = await connection.query(
+          `SELECT program_tagging_id
+             FROM program_tagging_table
+            WHERE curriculum_id = ?
+              AND year_level_id = ?
+              AND semester_id = ?
+              AND course_id = ?
+            LIMIT 1`,
+          [curriculumId, yearLevelId, semesterId, courseId],
+        );
+
+        if (existingRows.length) {
+          skippedItems.push({
+            row: index + 2,
+            reason: "Program tag already exists",
+          });
+          continue;
+        }
+
+        await connection.query(
+          `INSERT INTO program_tagging_table
+            (curriculum_id, year_level_id, semester_id, course_id)
+           VALUES (?, ?, ?, ?)`,
+          [
+            curriculumId,
+            yearLevelId,
+            semesterId,
+            courseId,
+          ],
+        );
+        importedCount += 1;
+      }
+    });
+
+    return res.json(buildImportResponse("Program tagging import finished", importedCount, skippedItems));
+  } catch (err) {
+    console.error("Program tagging import error:", err);
+    return res.status(500).json({ success: false, error: "Failed to import program tagging file" });
   }
 });
 
